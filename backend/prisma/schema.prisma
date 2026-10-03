@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  leads     Lead[]
+  users     Users[]
+
+  @@map("organizations")
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  name        String
+  description String?
+  createdAt   DateTime         @default(now())
+  permissions RolePermission[]
+  users       Users[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  description String?
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Users {
+  id              String              @id @default(uuid())
+  organizationId  String
+  fullName        String
+  email           String              @unique
+  passwordHash    String
+  roleId          String
+  managerId       String?
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  assignmentsFrom AssignmentHistory[] @relation("AssignmentActor")
+  followUps       FollowUp[]          @relation("FollowUpOwner")
+  leadHistory     LeadHistory[]       @relation("LeadHistoryActor")
+  notes           LeadNote[]          @relation("NoteAuthor")
+  leadsCreated    Lead[]              @relation("LeadCreatedBy")
+  leadsAssigned   Lead[]              @relation("LeadCurrentAssignee")
+  notifications   notification[]
+  manager         Users?              @relation("ManagerToExecutive", fields: [managerId], references: [id])
+  reports         Users[]             @relation("ManagerToExecutive")
+  organization    Organization        @relation(fields: [organizationId], references: [id])
+  role            Role                @relation(fields: [roleId], references: [id])
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+model Lead {
+  id                String              @id @default(uuid())
+  leadCode          String              @unique
+  organizationId    String
+  clientName        String
+  contactPerson     String
+  email             String?
+  phone             String
+  alternatePhone    String?
+  address           String?
+  source            String
+  productInterest   String?
+  description       String?
+  status            LeadStatus          @default(NEW)
+  priority          LeadPriority        @default(MEDIUM)
+  currentAssigneeId String?
+  assignmentDate    DateTime?
+  nextFollowUpDate  DateTime?
+  lastContactDate   DateTime?
+  conversionDate    DateTime?
+  lossReason        String?
+  tags              String[]            @default([])
+  isDeleted         Boolean             @default(false)
+  deletedAt         DateTime?
+  deletedById       String?
+  createdById       String
+  updatedById       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  previousStatus    LeadStatus?
+  assignmentHistory AssignmentHistory[]
+  followUps         FollowUp[]
+  history           LeadHistory[]
+  notes             LeadNote[]
+  createdBy         Users               @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  currentAssignee   Users?              @relation("LeadCurrentAssignee", fields: [currentAssigneeId], references: [id])
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([currentAssigneeId])
+  @@index([isDeleted])
+  @@map("leads")
+}
+
+model LeadHistory {
+  id        String   @id @default(uuid())
+  leadId    String
+  actorId   String
+  eventType String
+  fromValue String?
+  toValue   String?
+  comment   String?
+  createdAt DateTime @default(now())
+  actor     Users    @relation("LeadHistoryActor", fields: [actorId], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id])
+
+  @@index([leadId, createdAt])
+  @@map("lead_history")
+}
+
+model AssignmentHistory {
+  id           String   @id @default(uuid())
+  leadId       String
+  fromUserId   String?
+  toUserId     String
+  assignedById String
+  reason       String?
+  createdAt    DateTime @default(now())
+  assignedBy   Users    @relation("AssignmentActor", fields: [assignedById], references: [id])
+  lead         Lead     @relation(fields: [leadId], references: [id])
+
+  @@index([leadId, createdAt])
+  @@map("assignment_history")
+}
+
+model LeadNote {
+  id        String   @id @default(uuid())
+  leadId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    Users    @relation("NoteAuthor", fields: [authorId], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id])
+
+  @@index([leadId, createdAt])
+  @@map("lead_notes")
+}
+
+model FollowUp {
+  id          String         @id @default(uuid())
+  leadId      String
+  ownerId     String
+  dueAt       DateTime
+  notes       String?
+  status      FollowUpStatus @default(PENDING)
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  lead        Lead           @relation(fields: [leadId], references: [id])
+  owner       Users          @relation("FollowUpOwner", fields: [ownerId], references: [id])
+
+  @@index([leadId, status])
+  @@index([ownerId, dueAt])
+  @@map("follow_ups")
+}
+
+model LeadSequence {
+  id        String @id @default("singleton")
+  lastValue Int    @default(0)
+
+  @@map("lead_sequence")
+}
+
+model notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  users     Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  ON_HOLD
+  CONVERTED
+  LOST
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum FollowUpStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
