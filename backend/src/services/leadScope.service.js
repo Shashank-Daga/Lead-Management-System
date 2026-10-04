@@ -1,7 +1,7 @@
 const { PERMISSIONS } = require("../config/permissions");
 
 function buildLeadVisibilityWhere(user, teamMemberIds = []) {
-  const base = { organizationId: user.organizationId, isDeleted: false };
+  const base = { isDeleted: false };
 
   if (user.permissions.has(PERMISSIONS.LEAD_VIEW_ALL)) {
     return base;
@@ -26,6 +26,7 @@ function buildLeadVisibilityWhere(user, teamMemberIds = []) {
 
 function applyLeadVisibilityScope(user, searchFilter = {}, teamMemberIds = []) {
   const visibility = buildLeadVisibilityWhere(user, teamMemberIds);
+
   if (!searchFilter || Object.keys(searchFilter).length === 0) {
     return visibility;
   }
@@ -34,15 +35,15 @@ function applyLeadVisibilityScope(user, searchFilter = {}, teamMemberIds = []) {
 }
 
 function canViewLead(user, lead, teamMemberIds = []) {
+  if (lead.isDeleted) return false;
+
   if (user.permissions.has(PERMISSIONS.LEAD_VIEW_ALL)) return true;
 
   if (user.permissions.has(PERMISSIONS.LEAD_VIEW_SCOPED)) {
     return (
-      lead.organizationId === user.organizationId &&
-      !lead.isDeleted &&
-      (lead.currentAssigneeId === user.id ||
-        teamMemberIds.includes(lead.currentAssigneeId) ||
-        lead.createdById === user.id)
+      lead.currentAssigneeId === user.id ||
+      teamMemberIds.includes(lead.currentAssigneeId) ||
+      lead.createdById === user.id
     );
   }
 
@@ -54,7 +55,10 @@ function canViewLead(user, lead, teamMemberIds = []) {
 }
 
 function canEditLead(user, lead, teamMemberIds = []) {
+  if (lead.isDeleted) return false;
+
   if (user.permissions.has(PERMISSIONS.LEAD_EDIT_ALL)) return true;
+
   if (
     user.permissions.has(PERMISSIONS.LEAD_EDIT_SCOPED) &&
     (lead.createdById === user.id ||
@@ -63,25 +67,28 @@ function canEditLead(user, lead, teamMemberIds = []) {
   ) {
     return true;
   }
+
   if (
     user.permissions.has(PERMISSIONS.LEAD_EDIT_ASSIGNED) &&
     lead.currentAssigneeId === user.id
   ) {
     return true;
   }
+
   return false;
 }
 
 function canAssignLead(actor, targetUser, teamMemberIds = []) {
-  if (!targetUser || !targetUser.isActive || targetUser.organizationId !== actor.organizationId) {
+  if (!targetUser || !targetUser.isActive) {
     return false;
   }
 
-  // Database rows carry the role as `role.key` (users has no roleKey column);
-  // plain objects built elsewhere may carry `roleKey`. Accept either.
   const targetRoleKey = targetUser.roleKey || targetUser.role?.key;
 
-  if (actor.permissions.has(PERMISSIONS.LEAD_ASSIGN) || actor.permissions.has(PERMISSIONS.LEAD_REASSIGN)) {
+  if (
+    actor.permissions.has(PERMISSIONS.LEAD_ASSIGN) ||
+    actor.permissions.has(PERMISSIONS.LEAD_REASSIGN)
+  ) {
     if (actor.roleKey === "ADMIN") {
       return targetRoleKey === "MANAGER" || targetRoleKey === "EXECUTIVE";
     }

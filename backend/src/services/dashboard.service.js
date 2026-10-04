@@ -26,7 +26,7 @@ function endOfToday(now = new Date()) {
  * Dashboard numbers for the requesting user. Every query is built on
  * `buildLeadVisibilityWhere` / `buildFollowUpScopeWhere`, so an Executive only
  * ever sees their own assigned leads and follow-ups, a Manager their team's,
- * and an Admin the whole organization — and never another organization.
+ * and an Admin the whole organization.
  */
 async function getDashboardData(user) {
   const teamMemberIds = user.roleKey === "MANAGER" ? await getTeamMemberIds(user.id) : [];

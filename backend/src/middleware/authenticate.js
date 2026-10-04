@@ -31,7 +31,6 @@ const authenticate = asyncHandler(async (req, res, next) => {
 
   req.user = {
     id: user.id,
-    organizationId: user.organizationId,
     fullName: user.fullName,
     email: user.email,
     roleKey: user.role.key,

@@ -1,4 +1,4 @@
-// Cross-user (IDOR) and cross-organization security tests, driven over HTTP
+// Cross-user (IDOR) and team-access security tests, driven over HTTP
 // against the real Express app + real services (in-memory database).
 //
 // Convention: an attacker who knows a valid UUID must be refused. Both 403
@@ -139,75 +139,6 @@ test("Manager A1 CAN work on a lead assigned to their team", async () => {
   assert.equal((await c.delete(L)).status, 403, "only Admin holds lead.delete");
 });
 
-// ------------------------------------------------------------ organizations -----
-test("Org isolation: Admin A cannot touch any of Org B's lead data", async () => {
-  const w = buildWorld();
-  const L = w.leads.leadB1;
-  const before = snapshot(w, L);
-  for (const [label, run] of attacksOn(L, { note: w.notes.noteB1, followUp: w.followUps.fuB1 })) {
-    const res = await run(w.as(w.users.admin));
-    assert.equal(res.status, 404, `adminA -> ${label} should be 404, got ${res.status}`);
-  }
-  assert.equal(snapshot(w, L), before);
-});
-
-test("Org isolation: Admin B cannot touch Org A's lead data", async () => {
-  const w = buildWorld();
-  const L = w.leads.leadA1;
-  const before = snapshot(w, L);
-  for (const [label, run] of attacksOn(L, { note: w.notes.noteExecA1, followUp: w.followUps.fuA1 })) {
-    const res = await run(w.as(w.users.adminB));
-    assert.equal(res.status, 404, `adminB -> ${label} should be 404, got ${res.status}`);
-  }
-  assert.equal(snapshot(w, L), before);
-});
-
-test("Org isolation: Org B users cannot read Org A leads", async () => {
-  const w = buildWorld();
-  for (const u of [w.users.mgrB, w.users.execB]) {
-    refused(await w.as(u).get(`/api/leads/${w.leads.leadA1.id}`), u.fullName);
-  }
-});
-
-test("Org isolation: list, and search never cross organizations", async () => {
-  const w = buildWorld();
-  const list = await w.as(w.users.admin).get("/api/leads?pageSize=100");
-  assert.ok(list.body.items.every((l) => l.organizationId === w.orgA));
-  assert.ok(!list.body.items.some((l) => l.leadCode === "LD-000101"));
-  const search = await w.as(w.users.admin).get("/api/leads?search=Zeta");
-  assert.equal(search.body.items.length, 0, "Org B's 'Zeta B1' must not surface in Org A search");
-  const total = list.body.pagination.total;
-  assert.equal(total, w.db.tables.lead.filter((l) => l.organizationId === w.orgA).length);
-});
-
-test("Org isolation: Admin A cannot assign a lead to an Org B user", async () => {
-  const w = buildWorld();
-  const res = await w.as(w.users.admin).post(`/api/leads/${w.leads.leadA1.id}/assign`).send({ userId: w.users.execB.id });
-  refused(res, "cross-org assign");
-  assert.equal(w.db.tables.lead.find((l) => l.id === w.leads.leadA1.id).currentAssigneeId, w.users.execA1.id);
-});
-
-test("Org isolation: creating a lead with an Org B assignee is refused", async () => {
-  const w = buildWorld();
-  const res = await w.as(w.users.admin).post("/api/leads").send({
-    clientName: "X", contactPerson: "Y", phone: "123456", source: "web", assignToUserId: w.users.execB.id,
-  });
-  refused(res, "create with cross-org assignee");
-  assert.ok(!w.db.tables.lead.some((l) => l.clientName === "X"));
-});
-
-test("Org isolation: assignment history never resolves names from another organization", async () => {
-  const w = buildWorld();
-  // Poison a history row so it references an Org B user id.
-  w.db.tables.leadHistory.push({
-    id: id(), leadId: w.leads.leadA1.id, actorId: w.users.admin.id,
-    eventType: "ASSIGNED", fromValue: null, toValue: w.users.execB.id, createdAt: new Date(),
-  });
-  const res = await w.as(w.users.admin).get(`/api/leads/${w.leads.leadA1.id}/history`);
-  const row = res.body.find((h) => h.eventType === "ASSIGNED");
-  assert.notEqual(row.toValue, "Exec B", "Org B user's name must not leak");
-});
-
 // ------------------------------------------------------------ notes (E) ---------
 test("Notes: author can edit and delete own note", async () => {
   const w = buildWorld();
@@ -250,22 +181,6 @@ test("Notes: Admin can modify any note in their own organization", async () => {
   assert.equal((await w.as(w.users.admin).delete(base)).status, 204);
 });
 
-test("Notes: cross-org note UUID cannot be edited or deleted", async () => {
-  const w = buildWorld();
-  const n = w.notes.noteB1;
-  // Right lead/wrong org, wrong lead/right org, and mixed pairings all fail.
-  for (const [actor, leadId] of [
-    [w.users.admin, w.leads.leadB1.id],
-    [w.users.admin, w.leads.leadA1.id],
-    [w.users.adminB, w.leads.leadA1.id],
-  ]) {
-    const url = `/api/leads/${leadId}/notes/${n.id}`;
-    refused(await w.as(actor).patch(url).send({ body: "HACKED" }), "patch");
-    refused(await w.as(actor).delete(url), "delete");
-  }
-  assert.equal(w.db.tables.leadNote.find((x) => x.id === n.id).body, "org b note");
-});
-
 test("Notes: valid note id under the wrong lead id is 404", async () => {
   const w = buildWorld();
   const url = `/api/leads/${w.leads.leadA2.id}/notes/${w.notes.noteExecA1.id}`; // note belongs to leadA1
@@ -292,15 +207,25 @@ test("Follow-ups: manager works on team leads, is refused on unrelated leads", a
   refused(await c.patch(`/api/leads/${w.leads.leadA3.id}/follow-ups/${w.followUps.fuA3.id}`).send({ status: "CANCELLED" }), "unrelated patch");
 });
 
-test("Follow-ups: admin is organization-wide but never crosses organizations", async () => {
+test("Follow-ups: admin can manage follow-ups across the organization", async () => {
   const w = buildWorld();
   const c = w.as(w.users.admin);
-  for (const l of [w.leads.leadA1, w.leads.leadA2, w.leads.leadA3]) {
+
+  for (const l of [w.leads.leadA1, w.leads.leadA2, w.leads.leadA3, w.leads.leadB1]) {
     assert.equal((await c.get(`/api/leads/${l.id}/follow-ups`)).status, 200);
   }
-  assert.equal((await c.get(`/api/leads/${w.leads.leadB1.id}/follow-ups`)).status, 404);
-  assert.equal((await c.patch(`/api/leads/${w.leads.leadB1.id}/follow-ups/${w.followUps.fuB1.id}`).send({ status: "CANCELLED" })).status, 404);
-  assert.equal(w.followUps.fuB1.status, "PENDING");
+
+  assert.equal(
+    (await c.patch(
+      `/api/leads/${w.leads.leadB1.id}/follow-ups/${w.followUps.fuB1.id}`
+    ).send({ status: "CANCELLED" })).status,
+    200
+  );
+
+  assert.equal(
+    w.db.tables.followUp.find((f) => f.id === w.followUps.fuB1.id).status,
+    "CANCELLED"
+  );
 });
 
 test("Follow-ups: a valid follow-up id cannot be used with a different lead id", async () => {
@@ -314,14 +239,6 @@ test("Follow-ups: a valid follow-up id cannot be used with a different lead id",
   const fu = w.db.tables.followUp.find((f) => f.id === w.followUps.fuA2.id);
   assert.equal(fu.status, "PENDING");
   assert.equal(fu.notes, null);
-});
-
-test("Follow-ups: cross-organization follow-up id under an accessible lead is 404", async () => {
-  const w = buildWorld();
-  const url = `/api/leads/${w.leads.leadA1.id}/follow-ups/${w.followUps.fuB1.id}`;
-  assert.equal((await w.as(w.users.admin).patch(url).send({ status: "CANCELLED" })).status, 404);
-  assert.equal((await w.as(w.users.admin).delete(url)).status, 404);
-  assert.ok(w.db.tables.followUp.some((f) => f.id === w.followUps.fuB1.id));
 });
 
 // ------------------------------------------------------ leads CRUD + filters ------
@@ -371,14 +288,23 @@ test("Leads: search, status/priority filters, pagination and sorting", async () 
   assert.equal((await c.get("/api/leads?sortBy=passwordHash")).status, 422, "sort column is allow-listed");
 });
 
-test("Status transitions: invalid jumps are rejected, valid ones recorded in history", async () => {
+test("Status transitions: invalid transitions are rejected, valid ones recorded in history", async () => {
   const w = buildWorld();
   const c = w.as(w.users.execA1);
   const L = `/api/leads/${w.leads.leadA1.id}`;
-  assert.equal((await c.post(`${L}/status`).send({ status: "CONVERTED" })).status, 422);
+
+  // Moving to the same status is invalid.
+  assert.equal((await c.post(`${L}/status`).send({ status: "NEW" })).status, 422);
+
+  // Active stages can now move backward or forward.
   assert.equal((await c.post(`${L}/status`).send({ status: "CONTACTED" })).status, 200);
+
   const history = (await c.get(`${L}/history`)).body;
-  assert.ok(history.some((h) => h.eventType === "STATUS_CHANGE" && h.toValue === "CONTACTED"));
+  assert.ok(
+    history.some(
+      (h) => h.eventType === "STATUS_CHANGE" && h.toValue === "CONTACTED"
+    )
+  );
 });
 
 // ------------------------------------------------ assignment (positive paths) ------
@@ -437,15 +363,15 @@ test("Assignment: a Manager can assign a lead to themselves, with no self-notifi
   assert.equal(unreadFor(w, w.users.mgrA1).length, 0, "no 'assigned to you' notification for self-assignment");
 });
 
-test("Assignable users: Manager A cannot see Manager B's or an unrelated team's members", async () => {
+test("Assignable users: Manager A cannot see another team's members", async () => {
   const w = buildWorld();
   const res = await w.as(w.users.mgrA1).get("/api/users/assignable");
   const ids = res.body.map((u) => u.id);
   assert.ok(!ids.includes(w.users.execA3.id), "other team's executive excluded");
-  assert.ok(!ids.includes(w.users.mgrB.id) && !ids.includes(w.users.execB.id), "other organization excluded");
+  // assignment, atomic manager deactivation, and role/team-based user access.d");
 });
 
-test("Assignable users: Admin sees active Managers and Executives in their organization", async () => {
+test("Assignable users: Admin sees all active Managers and Executives", async () => {
   const w = buildWorld();
 
   const res = await w.as(w.users.admin).get("/api/users/assignable");
@@ -462,6 +388,8 @@ test("Assignable users: Admin sees active Managers and Executives in their organ
       w.users.execA1.id,
       w.users.execA2.id,
       w.users.execA3.id,
+      w.users.mgrB.id,
+      w.users.execB.id,
     ].sort()
   );
 

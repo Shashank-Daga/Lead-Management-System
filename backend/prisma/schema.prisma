@@ -7,16 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-  leads     Lead[]
-  users     Users[]
-
-  @@map("organizations")
-}
-
 model Role {
   id          String           @id @default(uuid())
   key         String           @unique
@@ -50,7 +40,6 @@ model RolePermission {
 
 model Users {
   id              String              @id @default(uuid())
-  organizationId  String
   fullName        String
   email           String              @unique
   passwordHash    String
@@ -68,17 +57,14 @@ model Users {
   notifications   notification[]
   manager         Users?              @relation("ManagerToExecutive", fields: [managerId], references: [id])
   reports         Users[]             @relation("ManagerToExecutive")
-  organization    Organization        @relation(fields: [organizationId], references: [id])
   role            Role                @relation(fields: [roleId], references: [id])
 
-  @@index([organizationId])
   @@map("users")
 }
 
 model Lead {
   id                String              @id @default(uuid())
   leadCode          String              @unique
-  organizationId    String
   clientName        String
   contactPerson     String
   email             String?
@@ -111,9 +97,7 @@ model Lead {
   notes             LeadNote[]
   createdBy         Users               @relation("LeadCreatedBy", fields: [createdById], references: [id])
   currentAssignee   Users?              @relation("LeadCurrentAssignee", fields: [currentAssigneeId], references: [id])
-  organization      Organization        @relation(fields: [organizationId], references: [id])
 
-  @@index([organizationId, status])
   @@index([currentAssigneeId])
   @@index([isDeleted])
   @@map("leads")

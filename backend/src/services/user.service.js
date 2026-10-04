@@ -14,7 +14,6 @@ async function notifyManagerForExecutiveAssignment(
   const manager = await tx.users.findFirst({
     where: {
       id: managerId,
-      organizationId: executiveUser.organizationId,
       isActive: true,
     },
     select: { id: true, fullName: true },
@@ -31,17 +30,17 @@ async function notifyManagerForExecutiveAssignment(
       metadata: {
         executiveId: executiveUser.id,
         executiveName: executiveUser.fullName,
-        organizationId: executiveUser.organizationId,
       },
     },
     tx,
   );
 }
 
-async function validateUserHierarchy(
-  organizationId,
-  { roleKey, managerId, existingUserId } = {},
-) {
+async function validateUserHierarchy({
+  roleKey,
+  managerId,
+  existingUserId,
+} = {}) {
   const nextRoleKey =
     roleKey ||
     (existingUserId
@@ -74,21 +73,20 @@ async function validateUserHierarchy(
   }
 
   const manager = await prisma.users.findFirst({
-    where: { id: managerId, organizationId, isActive: true },
+    where: { id: managerId, isActive: true },
     include: { role: { select: { key: true } } },
   });
 
   if (!manager || manager.role.key !== "MANAGER") {
     throw new ApiError(
       422,
-      "Executive manager must be a valid active manager in the same organization.",
+      "Executive manager must be a valid active manager.",
     );
   }
 }
 
-async function listUsers(organizationId) {
+async function listUsers() {
   return prisma.users.findMany({
-    where: { organizationId },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
@@ -106,13 +104,13 @@ async function listAssignableUsers(actor) {
   if (
     !actor.permissions.has("lead.assign") &&
     !actor.permissions.has("lead.reassign")
-  )
+  ) {
     return [];
+  }
 
   if (actor.roleKey === "ADMIN") {
     const users = await prisma.users.findMany({
       where: {
-        organizationId: actor.organizationId,
         isActive: true,
         role: { is: { key: { in: ["MANAGER", "EXECUTIVE"] } } },
       },
@@ -143,15 +141,11 @@ async function listAssignableUsers(actor) {
       })
       .then((rows) => rows.map((row) => row.id));
 
-    // A Manager may assign to themselves or to their own active Executives —
-    // exactly what canAssignLead() permits — so no role filter here: the
-    // Manager is in this list by design, and everyone else in it reports to
-    // them (only Executives can have a manager).
     const ids = [actor.id, ...teamMemberIds];
+
     return prisma.users.findMany({
       where: {
         id: { in: ids },
-        organizationId: actor.organizationId,
         isActive: true,
       },
       select: {
@@ -167,11 +161,11 @@ async function listAssignableUsers(actor) {
   return [];
 }
 
-async function createUser(organizationId, input) {
+async function createUser(input) {
   const role = await prisma.role.findUnique({ where: { key: input.roleKey } });
   if (!role) throw new ApiError(400, `Unknown role: ${input.roleKey}`);
 
-  await validateUserHierarchy(organizationId, {
+  await validateUserHierarchy({
     roleKey: input.roleKey,
     managerId: input.managerId,
   });
@@ -181,7 +175,6 @@ async function createUser(organizationId, input) {
   return prisma.$transaction(async (tx) => {
     const created = await tx.users.create({
       data: {
-        organizationId,
         fullName: input.fullName,
         email: input.email,
         passwordHash,
@@ -193,18 +186,13 @@ async function createUser(organizationId, input) {
         fullName: true,
         email: true,
         createdAt: true,
-        organizationId: true,
       },
     });
 
     if (input.roleKey === "EXECUTIVE" && input.managerId) {
       await notifyManagerForExecutiveAssignment(
         tx,
-        {
-          ...created,
-          fullName: created.fullName,
-          organizationId: created.organizationId,
-        },
+        created,
         input.managerId,
       );
     }
@@ -213,13 +201,15 @@ async function createUser(organizationId, input) {
   });
 }
 
-async function updateUser(organizationId, userId, input) {
-  const user = await prisma.users.findFirst({
-    where: { id: userId, organizationId },
+async function updateUser(userId, input) {
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
   });
+
   if (!user) throw new ApiError(404, "User not found.");
 
   let roleId = undefined;
+
   const currentRoleKeyBefore = user.roleId
     ? (
       await prisma.role.findUnique({
@@ -228,35 +218,29 @@ async function updateUser(organizationId, userId, input) {
       })
     )?.key
     : undefined;
-  let nextRoleKey = user.roleId
-    ? (
-      await prisma.role.findUnique({
-        where: { id: user.roleId },
-        select: { key: true },
-      })
-    )?.key
-    : undefined;
+
+  let nextRoleKey = currentRoleKeyBefore;
 
   if (input.roleKey) {
     const role = await prisma.role.findUnique({
       where: { key: input.roleKey },
     });
+
     if (!role) throw new ApiError(400, `Unknown role: ${input.roleKey}`);
+
     roleId = role.id;
     nextRoleKey = input.roleKey;
   }
 
-  // Executives whose Manager was deactivated sit under direct Admin ownership
-  // (managerId = null). Renaming or (de)activating such a user must not be
-  // blocked by the "Executives need a manager" rule, so hierarchy validation
-  // only runs when the role or manager is actually being changed.
   const hierarchyChanging =
     input.managerId !== undefined ||
     (input.roleKey && input.roleKey !== currentRoleKeyBefore);
+
   if (hierarchyChanging) {
     const targetManagerId =
       input.managerId === undefined ? user.managerId : input.managerId;
-    await validateUserHierarchy(organizationId, {
+
+    await validateUserHierarchy({
       roleKey: nextRoleKey,
       managerId: targetManagerId,
       existingUserId: userId,
@@ -264,8 +248,6 @@ async function updateUser(organizationId, userId, input) {
   }
 
   return prisma.$transaction(async (tx) => {
-    // Same rule as deactivateUser(): a Manager going inactive releases their
-    // active Executives to Admin ownership inside this same transaction.
     if (
       input.isActive === false &&
       user.isActive &&
@@ -273,7 +255,6 @@ async function updateUser(organizationId, userId, input) {
     ) {
       await tx.users.updateMany({
         where: {
-          organizationId,
           role: { is: { key: "EXECUTIVE" } },
           managerId: userId,
           isActive: true,
@@ -295,20 +276,16 @@ async function updateUser(organizationId, userId, input) {
         fullName: true,
         email: true,
         isActive: true,
-        organizationId: true,
         managerId: true,
       },
     });
 
     const currentRoleKey = nextRoleKey ?? user.role?.key;
+
     if (currentRoleKey === "EXECUTIVE" && input.managerId !== undefined) {
       await notifyManagerForExecutiveAssignment(
         tx,
-        {
-          ...updated,
-          fullName: updated.fullName,
-          organizationId: updated.organizationId,
-        },
+        updated,
         updated.managerId,
         user.managerId,
       );
@@ -318,19 +295,9 @@ async function updateUser(organizationId, userId, input) {
   });
 }
 
-/**
- * Deactivates a user and — if they're a Manager — reassigns their active
- * Executives to direct Admin ownership (managerId = null, the existing
- * convention for "reports to Admin") in the SAME database transaction.
- *
- * This must be atomic: if the reassignment succeeded but the deactivation
- * failed (or vice versa), we'd either leave an active Manager with no
- * reports, or leave Executives silently reporting to a now-inactive Manager.
- * Both are invalid states the hierarchy validator would normally prevent.
- */
-async function deactivateUser(organizationId, userId) {
-  const user = await prisma.users.findFirst({
-    where: { id: userId, organizationId },
+async function deactivateUser(userId) {
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
     include: { role: { select: { key: true } } },
   });
 
@@ -340,7 +307,6 @@ async function deactivateUser(organizationId, userId) {
     if (user.role.key === "MANAGER") {
       await tx.users.updateMany({
         where: {
-          organizationId,
           role: { is: { key: "EXECUTIVE" } },
           managerId: userId,
           isActive: true,
@@ -357,7 +323,6 @@ async function deactivateUser(organizationId, userId) {
         fullName: true,
         email: true,
         isActive: true,
-        organizationId: true,
         managerId: true,
       },
     });

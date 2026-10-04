@@ -1,4 +1,4 @@
-// Installs a fake `config/prisma` module into require.cache so services can be
+﻿// Installs a fake `config/prisma` module into require.cache so services can be
 // exercised without a generated Prisma client or a database. Each test builds
 // its own fake, then calls `load()` to get freshly-required service modules
 // bound to it.
@@ -23,7 +23,6 @@ function installFakePrisma(fake) {
 function makeUser(overrides = {}) {
   return {
     id: "11111111-1111-4111-8111-111111111111",
-    organizationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     roleKey: "EXECUTIVE",
     permissions: new Set(),
     ...overrides,
@@ -31,3 +30,4 @@ function makeUser(overrides = {}) {
 }
 
 module.exports = { installFakePrisma, makeUser };
+

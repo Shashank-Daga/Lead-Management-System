@@ -5,7 +5,6 @@ const { buildLeadVisibilityWhere, applyLeadVisibilityScope } = require('../src/s
 
 const manager = {
   id: 'manager-1',
-  organizationId: 'org-1',
   roleKey: 'MANAGER',
   permissions: new Set(['lead.view_scoped']),
 };
@@ -14,7 +13,6 @@ test('manager scope keeps its own visibility filter separate from search predica
   const visibility = buildLeadVisibilityWhere(manager, ['exec-1']);
 
   assert.deepEqual(visibility, {
-    organizationId: 'org-1',
     isDeleted: false,
     OR: [
       { currentAssigneeId: { in: ['manager-1', 'exec-1'] } },
@@ -27,7 +25,6 @@ test('manager scope keeps its own visibility filter separate from search predica
   assert.deepEqual(scopedQuery, {
     AND: [
       {
-        organizationId: 'org-1',
         isDeleted: false,
         OR: [
           { currentAssigneeId: { in: ['manager-1', 'exec-1'] } },

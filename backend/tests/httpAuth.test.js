@@ -1,4 +1,4 @@
-// HTTP-level tests: real Express app + real JWT + real Argon2, with the database
+﻿// HTTP-level tests: real Express app + real JWT + real Argon2, with the database
 // replaced by an in-memory fake. Exercises middleware order (authenticate ->
 // authorize), status codes, and response shapes exactly as a client sees them.
 process.env.JWT_ACCESS_SECRET = "http_test_access_secret_0123456789abcdef";
@@ -25,7 +25,6 @@ async function buildApp() {
   const users = {
     [EXEC_ID]: {
       id: EXEC_ID,
-      organizationId: ORG,
       fullName: "Eli Exec",
       email: "eli@example.com",
       passwordHash,
@@ -168,3 +167,4 @@ test("unknown route -> 404 JSON", async () => {
   const res = await request(app).get("/api/nope");
   assert.equal(res.status, 404);
 });
+

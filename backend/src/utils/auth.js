@@ -14,7 +14,7 @@ async function verifyPassword(hash, plain) {
 /** Issue a short-lived access token carrying the minimum claims needed for authz. */
 function signAccessToken(user) {
   return jwt.sign(
-    { sub: user.id, roleKey: user.role.key, orgId: user.organizationId },
+    { sub: user.id, roleKey: user.role.key },
     process.env.JWT_ACCESS_SECRET,
     { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m" }
   );

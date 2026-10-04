@@ -3,8 +3,6 @@ const assert = require("node:assert/strict");
 const { installFakePrisma, makeUser } = require("./helpers/fakePrisma");
 const { PERMISSIONS } = require("../src/config/permissions");
 
-const ORG_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const ORG_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 // ---- A2: overdue follow-up scoping ------------------------------------------
 // The fake evaluates the `where` the service builds against an in-memory table,
@@ -16,7 +14,6 @@ function fakeFollowUpTable(rows) {
         rows.filter((r) => {
           if (where.status && r.status !== where.status) return false;
           if (where.dueAt && !(r.dueAt < where.dueAt.lt)) return false;
-          if (where.lead?.organizationId && r.lead.organizationId !== where.lead.organizationId) return false;
           if (where.ownerId?.in && !where.ownerId.in.includes(r.ownerId)) return false;
           return true;
         }),
@@ -26,11 +23,11 @@ function fakeFollowUpTable(rows) {
 
 const past = new Date(Date.now() - 86400000);
 const rows = [
-  { id: "f-exec1", ownerId: "exec1", status: "PENDING", dueAt: past, lead: { organizationId: ORG_A } },
-  { id: "f-exec2", ownerId: "exec2", status: "PENDING", dueAt: past, lead: { organizationId: ORG_A } },
-  { id: "f-other-team", ownerId: "execX", status: "PENDING", dueAt: past, lead: { organizationId: ORG_A } },
-  { id: "f-orgB", ownerId: "execB", status: "PENDING", dueAt: past, lead: { organizationId: ORG_B } },
-  { id: "f-done", ownerId: "exec1", status: "COMPLETED", dueAt: past, lead: { organizationId: ORG_A } },
+  { id: "f-exec1", ownerId: "exec1", status: "PENDING", dueAt: past, lead: {} },
+  { id: "f-exec2", ownerId: "exec2", status: "PENDING", dueAt: past, lead: {} },
+  { id: "f-other-team", ownerId: "execX", status: "PENDING", dueAt: past, lead: {} },
+  { id: "f-other-manager", ownerId: "execB", status: "PENDING", dueAt: past, lead: {} },
+  { id: "f-done", ownerId: "exec1", status: "COMPLETED", dueAt: past, lead: {} },
 ];
 
 test("A2: Admin sees other users' overdue follow-ups org-wide", async () => {
@@ -38,15 +35,7 @@ test("A2: Admin sees other users' overdue follow-ups org-wide", async () => {
   const svc = require("../src/services/followUp.service");
   const admin = makeUser({ id: "admin", roleKey: "ADMIN", permissions: new Set([PERMISSIONS.FOLLOWUP_MANAGE_ALL, PERMISSIONS.LEAD_VIEW_ALL]) });
   const ids = (await svc.listOverdueFollowUps(admin, [])).map((f) => f.id).sort();
-  assert.deepEqual(ids, ["f-exec1", "f-exec2", "f-other-team"]);
-});
-
-test("A2: Admin cannot see another organization's follow-up", async () => {
-  installFakePrisma(fakeFollowUpTable(rows));
-  const svc = require("../src/services/followUp.service");
-  const admin = makeUser({ id: "admin", permissions: new Set([PERMISSIONS.FOLLOWUP_MANAGE_ALL, PERMISSIONS.LEAD_VIEW_ALL]) });
-  const ids = (await svc.listOverdueFollowUps(admin, [])).map((f) => f.id);
-  assert.ok(!ids.includes("f-orgB"));
+  assert.deepEqual(ids, ["f-exec1", "f-exec2", "f-other-manager", "f-other-team"]);
 });
 
 test("A2: Manager sees team follow-ups but not an unrelated team's", async () => {
@@ -78,18 +67,24 @@ test("A3: assignment history resolves UUIDs to names, falls back to raw id if us
   ];
   let lookedUp = null;
   installFakePrisma({
-    lead: { findFirst: async () => ({ id: "L1", organizationId: ORG_A, isDeleted: false, createdById: "x", currentAssigneeId: null }) },
+    lead: { findFirst: async () => ({ id: "L1", isDeleted: false, createdById: "x", currentAssigneeId: null }) },
     users: {
       findMany: async ({ where }) => {
-        if (where.organizationId !== ORG_A) throw new Error("lookup must be org-scoped");
         lookedUp = where.id.in;
-        return [{ id: EXEC_A, fullName: "Executive A" }].filter((u) => where.id.in.includes(u.id));
+        return [{ id: EXEC_A, fullName: "Executive A" }].filter((u) =>
+          where.id.in.includes(u.id)
+        );
       },
     },
     leadHistory: { findMany: async () => events.map((e) => ({ ...e })) },
   });
   const { getLeadHistory } = require("../src/services/lead.service");
-  const admin = makeUser({ organizationId: ORG_A, permissions: new Set([PERMISSIONS.LEAD_VIEW_ALL, PERMISSIONS.HISTORY_VIEW_ALL]) });
+  const admin = makeUser({
+    permissions: new Set([
+      PERMISSIONS.LEAD_VIEW_ALL,
+      PERMISSIONS.HISTORY_VIEW_ALL,
+    ]),
+  });
   const out = await getLeadHistory(admin, "L1");
   assert.equal(out[0].toValue, "Executive A");
   assert.equal(out[1].fromValue, "Executive A");
@@ -118,7 +113,11 @@ function fakeUserDb({ failOnUserUpdate = false } = {}) {
   return {
     state,
     users: {
-      findFirst: async () => ({ id: "m1", role: { key: "MANAGER" } }),
+      findUnique: async () => ({
+        id: "m1",
+        role: { key: "MANAGER" },
+        isActive: true,
+      }),
     },
     $transaction: async (fn) => {
       const before = snapshot();
@@ -136,7 +135,7 @@ test("A4: manager deactivation reassigns executives and deactivates in one trans
   const db = fakeUserDb();
   installFakePrisma(db);
   const { deactivateUser } = require("../src/services/user.service");
-  const result = await deactivateUser(ORG_A, "m1");
+  const result = await deactivateUser("m1");
   assert.equal(result.isActive, false);
   assert.deepEqual(db.state.managerIdOf, { e1: null, e2: null });
 });
@@ -145,7 +144,7 @@ test("A4: failure during deactivation rolls back the executive reassignment", as
   const db = fakeUserDb({ failOnUserUpdate: true });
   installFakePrisma(db);
   const { deactivateUser } = require("../src/services/user.service");
-  await assert.rejects(() => deactivateUser(ORG_A, "m1"), /boom/);
+  await assert.rejects(() => deactivateUser("m1"), /boom/);
   assert.deepEqual(db.state.managerIdOf, { e1: "m1", e2: "m1" }, "executives untouched after rollback");
   assert.equal(db.state.mgrActive, true);
 });

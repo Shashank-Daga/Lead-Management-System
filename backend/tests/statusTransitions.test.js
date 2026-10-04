@@ -11,8 +11,16 @@ test('ON_HOLD resumes only to the prior active status', () => {
   assert.equal(isValidTransition('ON_HOLD', 'QUALIFIED', null), false);
 });
 
-test('valid active-status transitions remain allowed', () => {
+test('active statuses can move forward or backward', () => {
   assert.equal(isValidTransition('NEW', 'CONTACTED'), true);
+  assert.equal(isValidTransition('CONTACTED', 'NEW'), true);
+
+  assert.equal(isValidTransition('QUALIFIED', 'PROPOSAL'), true);
+  assert.equal(isValidTransition('PROPOSAL', 'QUALIFIED'), true);
+
   assert.equal(isValidTransition('NEGOTIATION', 'CONVERTED'), true);
+  assert.equal(isValidTransition('CONVERTED', 'NEGOTIATION'), true);
+
   assert.equal(isValidTransition('NEGOTIATION', 'LOST'), true);
+  assert.equal(isValidTransition('LOST', 'NEGOTIATION'), true);
 });

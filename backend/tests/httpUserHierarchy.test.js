@@ -1,5 +1,5 @@
 // User and hierarchy rules over HTTP: who can be whose manager, notifications on
-// assignment, atomic manager deactivation, and cross-organization user access.
+// assignment, atomic manager deactivation, and role/team-based user access.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { buildWorld, id } = require("./helpers/world");
@@ -17,7 +17,6 @@ test("Admin creates a Manager (no manager id)", async () => {
   const w = buildWorld();
   const res = await w.as(w.users.admin).post("/api/users").send(newUser({ roleKey: "MANAGER" }));
   assert.equal(res.status, 201);
-  assert.equal(res.body.organizationId, w.orgA);
   assert.ok(!("passwordHash" in res.body));
 });
 
@@ -28,7 +27,6 @@ test("Admin creates an Executive under a valid Manager; the Manager is notified"
   const notes = unreadFor(w, w.users.mgrA1);
   assert.equal(notes.length, 1);
   assert.equal(notes[0].type, "EXECUTIVE_ASSIGNED");
-  assert.equal(notes[0].metadata.organizationId, w.orgA);
   assert.equal(unreadFor(w, w.users.mgrA2).length, 0, "other managers are not notified");
   assert.match(notes[0].id, /^[0-9a-f-]{36}$/, "returned/persisted id is the real row id");
 });
@@ -46,11 +44,20 @@ test("Hierarchy: an inactive Manager cannot be assigned", async () => {
   assert.equal(res.status, 422);
 });
 
-test("Hierarchy: a Manager from another organization cannot be assigned", async () => {
+test("Hierarchy: an active Manager can be assigned", async () => {
   const w = buildWorld();
-  const res = await w.as(w.users.admin).post("/api/users").send(newUser({ managerId: w.users.mgrB.id }));
-  assert.equal(res.status, 422);
-  assert.equal(unreadFor(w, w.users.mgrB).length, 0, "no notification leaks to the other org");
+
+  const res = await w
+    .as(w.users.admin)
+    .post("/api/users")
+    .send(newUser({ managerId: w.users.mgrB.id }));
+
+  assert.equal(res.status, 201);
+  assert.equal(
+    w.db.tables.users.find((u) => u.id === res.body.id).managerId,
+    w.users.mgrB.id
+  );
+  assert.equal(unreadFor(w, w.users.mgrB).length, 1);
 });
 
 test("Hierarchy: Executive cannot report to an Executive; Admin cannot be a manager", async () => {
@@ -84,12 +91,29 @@ test("Hierarchy: reassigning an Executive notifies the NEW manager only, and not
   assert.equal(unreadFor(w, w.users.mgrA2).length, 1);
 });
 
-test("Hierarchy: reassigning to an invalid / cross-org manager is rejected and leaves data unchanged", async () => {
+test("Hierarchy: reassigning to another Manager is allowed; assigning to an Executive is rejected", async () => {
   const w = buildWorld();
   const url = `/api/users/${w.users.execA1.id}`;
-  assert.equal((await w.as(w.users.admin).patch(url).send({ managerId: w.users.mgrB.id })).status, 422);
-  assert.equal((await w.as(w.users.admin).patch(url).send({ managerId: w.users.execA2.id })).status, 422);
-  assert.equal(w.db.tables.users.find((u) => u.id === w.users.execA1.id).managerId, w.users.mgrA1.id);
+
+  assert.equal(
+    (await w.as(w.users.admin).patch(url).send({ managerId: w.users.mgrB.id })).status,
+    200
+  );
+
+  assert.equal(
+    w.db.tables.users.find((u) => u.id === w.users.execA1.id).managerId,
+    w.users.mgrB.id
+  );
+
+  assert.equal(
+    (await w.as(w.users.admin).patch(url).send({ managerId: w.users.execA2.id })).status,
+    422
+  );
+
+  assert.equal(
+    w.db.tables.users.find((u) => u.id === w.users.execA1.id).managerId,
+    w.users.mgrB.id
+  );
 });
 
 test("Manager deactivation releases active Executives to Admin ownership and keeps history", async () => {
@@ -124,21 +148,44 @@ test("Manager deactivation rolls back completely if any step fails", async () =>
   assert.equal(row(w.users.execA2).managerId, w.users.mgrA1.id);
 });
 
-test("Users API: only Admin; org-scoped list; cross-org modification is 404", async () => {
+test("Users API: only Admin can list/create/manage users", async () => {
   const w = buildWorld();
+
   for (const u of [w.users.mgrA1, w.users.execA1]) {
     assert.equal((await w.as(u).get("/api/users")).status, 403);
-    assert.equal((await w.as(u).post("/api/users").send(newUser({ roleKey: "MANAGER" }))).status, 403);
+    assert.equal(
+      (await w.as(u).post("/api/users").send(newUser({ roleKey: "MANAGER" }))).status,
+      403
+    );
   }
+
   const list = await w.as(w.users.admin).get("/api/users");
+
+  assert.equal(list.status, 200);
   assert.ok(list.body.length > 0);
-  assert.ok(!list.body.some((u) => [w.users.adminB.id, w.users.mgrB.id, w.users.execB.id].includes(u.id)));
-  assert.equal((await w.as(w.users.admin).patch(`/api/users/${w.users.execB.id}`).send({ fullName: "HACKED" })).status, 404);
-  assert.equal((await w.as(w.users.admin).post(`/api/users/${w.users.execB.id}/deactivate`)).status, 404);
-  assert.equal(w.db.tables.users.find((u) => u.id === w.users.execB.id).isActive, true);
+
+  assert.ok(
+    list.body.some((u) => u.id === w.users.mgrB.id),
+    "Admin can see Managers across the single organization"
+  );
+
+  assert.equal(
+    (await w.as(w.users.admin).patch(`/api/users/${w.users.execB.id}`).send({ fullName: "HACKED" })).status,
+    200
+  );
+
+  assert.equal(
+    (await w.as(w.users.admin).post(`/api/users/${w.users.execB.id}/deactivate`)).status,
+    200
+  );
+
+  assert.equal(
+    w.db.tables.users.find((u) => u.id === w.users.execB.id).isActive,
+    false
+  );
 });
 
-test("Assignable users: manager sees self + own team; executive sees none; org-scoped", async () => {
+test("Assignable users: manager sees self + own team; executive sees none", async () => {
   const w = buildWorld();
   const mgr = await w.as(w.users.mgrA1).get("/api/users/assignable");
   assert.equal(mgr.status, 200);
@@ -146,8 +193,6 @@ test("Assignable users: manager sees self + own team; executive sees none; org-s
     mgr.body.map((u) => u.id).sort(),
     [w.users.mgrA1.id, w.users.execA1.id, w.users.execA2.id].sort()
   );
-  const admin = await w.as(w.users.admin).get("/api/users/assignable");
-  assert.ok(!admin.body.some((u) => u.id === w.users.execB.id));
   const exec = await w.as(w.users.execA1).get("/api/users/assignable");
   assert.ok(exec.status === 403 || exec.body.length === 0);
 });

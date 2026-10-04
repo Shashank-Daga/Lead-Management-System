@@ -1,10 +1,9 @@
-const test = require('node:test');
+﻿const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { canManageFollowUp, resolveFollowUpCompletionData } = require('../src/services/followUp.service');
 
 const lead = {
-  organizationId: 'org-1',
   isDeleted: false,
   currentAssigneeId: 'exec-a',
   createdById: 'manager-a',
@@ -12,14 +11,12 @@ const lead = {
 
 test('executive can manage only leads in their permitted scope', () => {
   const executive = {
-    organizationId: 'org-1',
     permissions: new Set(['followup.manage_assigned']),
     roleKey: 'EXECUTIVE',
     id: 'exec-a',
   };
 
   const otherExecutive = {
-    organizationId: 'org-1',
     permissions: new Set(['followup.manage_assigned']),
     roleKey: 'EXECUTIVE',
     id: 'exec-b',
@@ -47,3 +44,4 @@ test('follow-up completion timestamps follow the required lifecycle rules', () =
   assert.equal(pendingFromCancelled.status, 'PENDING');
   assert.equal(pendingFromCancelled.completedAt, null);
 });
+

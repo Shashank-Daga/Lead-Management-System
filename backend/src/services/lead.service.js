@@ -28,7 +28,7 @@ async function recordHistory(tx, { leadId, actorId, eventType, fromValue, toValu
 
 async function getLeadForUser(user, leadId) {
   const lead = await prisma.lead.findFirst({
-    where: { id: leadId, organizationId: user.organizationId, isDeleted: false },
+    where: { id: leadId, isDeleted: false },
     include: {
       currentAssignee: { select: { id: true, fullName: true } },
       createdBy: { select: { id: true, fullName: true } },
@@ -45,9 +45,9 @@ async function getLeadForUser(user, leadId) {
   return lead;
 }
 
-async function getLeadOr404(leadId, organizationId) {
+async function getLeadOr404(leadId) {
   const lead = await prisma.lead.findFirst({
-    where: { id: leadId, organizationId, isDeleted: false },
+    where: { id: leadId, isDeleted: false },
     include: {
       currentAssignee: { select: { id: true, fullName: true } },
       createdBy: { select: { id: true, fullName: true } },
@@ -62,7 +62,7 @@ async function createLead(user, input) {
     let targetUser = null;
     if (input.assignToUserId) {
       targetUser = await tx.users.findFirst({
-        where: { id: input.assignToUserId, organizationId: user.organizationId, isActive: true },
+        where: { id: input.assignToUserId, isActive: true },
         include: { role: { select: { key: true } } },
       });
 
@@ -77,7 +77,6 @@ async function createLead(user, input) {
     const lead = await tx.lead.create({
       data: {
         leadCode,
-        organizationId: user.organizationId,
         clientName: input.clientName,
         contactPerson: input.contactPerson,
         email: input.email || null,
@@ -294,7 +293,7 @@ async function assignLead(user, leadId, { userId, reason }) {
   const lead = await getLeadForUser(user, leadId);
 
   const targetUser = await prisma.users.findFirst({
-    where: { id: userId, organizationId: user.organizationId, isActive: true },
+    where: { id: userId, isActive: true },
     include: { role: { select: { key: true } } },
   });
   if (!targetUser) throw new ApiError(404, "Target user not found.");
@@ -387,7 +386,7 @@ async function getLeadHistory(user, leadId) {
 
   if (userIds.length > 0) {
     const users = await prisma.users.findMany({
-      where: { id: { in: [...new Set(userIds)] }, organizationId: user.organizationId },
+      where: { id: { in: [...new Set(userIds)] } },
       select: { id: true, fullName: true },
     });
 

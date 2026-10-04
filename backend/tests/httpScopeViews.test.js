@@ -26,11 +26,11 @@ test("Executive dashboard: reachable, scoped to 'own', shows only their numbers"
   assert.ok(Number.isInteger(d.dueTodayCount));
 });
 
-test("Executive dashboard never includes a peer's or another org's leads/follow-ups", async () => {
+test("Executive dashboard never includes a peer's leads/follow-ups", async () => {
   const w = buildWorld();
   const d = (await w.as(w.users.execA1).get("/api/dashboard")).body;
   const text = JSON.stringify(d);
-  for (const secret of ["LD-000002", "LD-000003", "LD-000101", w.followUps.fuA2.id, w.followUps.fuA3.id, w.followUps.fuB1.id]) {
+  for (const secret of ["LD-000002", "LD-000003", w.followUps.fuA2.id, w.followUps.fuA3.id, w.followUps.fuB1.id]) {
     assert.ok(!text.includes(secret), `dashboard leaked ${secret}`);
   }
 });
@@ -42,7 +42,7 @@ test("Another executive gets their own, different numbers", async () => {
   assert.equal(d.overdueFollowUps[0].id, w.followUps.fuA2.id);
 });
 
-test("Manager dashboard: scope 'team'; Admin dashboard: scope 'organization', org-only", async () => {
+test("Manager dashboard: scope 'team'; Admin dashboard: scope 'organization'", async () => {
   const w = buildWorld();
   const m = (await w.as(w.users.mgrA1).get("/api/dashboard")).body;
   assert.equal(m.scope, "team");
@@ -51,10 +51,18 @@ test("Manager dashboard: scope 'team'; Admin dashboard: scope 'organization', or
 
   const a = (await w.as(w.users.admin).get("/api/dashboard")).body;
   assert.equal(a.scope, "organization");
-  assert.equal(a.totalLeads, w.db.tables.lead.filter((l) => l.organizationId === w.orgA).length);
-  assert.ok(!JSON.stringify(a).includes(w.followUps.fuB1.id));
+  assert.equal(a.totalLeads, w.db.tables.lead.length);
   const ids = a.overdueFollowUps.map((f) => f.id).sort();
-  assert.deepEqual(ids, [w.followUps.fuA1.id, w.followUps.fuA2.id, w.followUps.fuA3.id].sort(), "Admin sees every user's overdue follow-up in the org");
+  assert.deepEqual(
+    ids,
+    [
+      w.followUps.fuA1.id,
+      w.followUps.fuA2.id,
+      w.followUps.fuA3.id,
+      w.followUps.fuB1.id,
+    ].sort(),
+    "Admin sees every user's overdue follow-up in the organization"
+  );
 });
 
 test("Dashboard requires authentication", async () => {
@@ -65,14 +73,19 @@ test("Dashboard requires authentication", async () => {
 // ---- CSV export -------------------------------------------------------------------
 const csvCodes = (res) => res.text.split("\n").slice(1).map((l) => l.split(",")[0]).filter(Boolean).sort();
 
-test("CSV: Admin exports the whole organization and nothing from another org", async () => {
+test("CSV: Admin exports all leads", async () => {
   const w = buildWorld();
   const res = await w.as(w.users.admin).get("/api/dashboard/export/leads.csv");
+
   assert.equal(res.status, 200);
   assert.match(res.headers["content-type"], /text\/csv/);
+
   const codes = csvCodes(res);
-  assert.deepEqual(codes, w.db.tables.lead.filter((l) => l.organizationId === w.orgA).map((l) => l.leadCode).sort());
-  assert.ok(!codes.includes("LD-000101"));
+
+  assert.deepEqual(
+    codes,
+    w.db.tables.lead.map((l) => l.leadCode).sort()
+  );
 });
 
 test("CSV: Manager exports own/team leads only", async () => {
@@ -82,15 +95,20 @@ test("CSV: Manager exports own/team leads only", async () => {
   const codes = csvCodes(res);
   assert.ok(codes.includes("LD-000001") && codes.includes("LD-000002"));
   assert.ok(!codes.includes("LD-000003"), "other manager's team excluded");
-  assert.ok(!codes.includes("LD-000101"), "other org excluded");
 });
 
-test("CSV: Executive has no export permission (403); anonymous is 401; org B admin sees only org B", async () => {
+test("CSV: Executive has no export permission (403); anonymous is 401", async () => {
   const w = buildWorld();
-  assert.equal((await w.as(w.users.execA1).get("/api/dashboard/export/leads.csv")).status, 403);
-  assert.equal((await w.request().get("/api/dashboard/export/leads.csv")).status, 401);
-  const b = await w.as(w.users.adminB).get("/api/dashboard/export/leads.csv");
-  assert.deepEqual(csvCodes(b), ["LD-000101"]);
+
+  assert.equal(
+    (await w.as(w.users.execA1).get("/api/dashboard/export/leads.csv")).status,
+    403
+  );
+
+  assert.equal(
+    (await w.request().get("/api/dashboard/export/leads.csv")).status,
+    401
+  );
 });
 
 // ---- Notifications ------------------------------------------------------------------
@@ -98,14 +116,14 @@ test("Notifications: users see and read only their own", async () => {
   const w = buildWorld();
   const mine = { id: id(), userId: w.users.mgrA1.id, type: "T", title: "mine", message: "m", isRead: false, metadata: {}, createdAt: new Date() };
   const theirs = { id: id(), userId: w.users.execA1.id, type: "T", title: "theirs", message: "m", isRead: false, metadata: {}, createdAt: new Date() };
-  const otherOrg = { id: id(), userId: w.users.mgrB.id, type: "T", title: "org b", message: "m", isRead: false, metadata: {}, createdAt: new Date() };
-  w.db.tables.notification.push(mine, theirs, otherOrg);
+  const otherUser = { id: id(), userId: w.users.mgrB.id, type: "T", title: "other user", message: "m", isRead: false, metadata: {}, createdAt: new Date() };
+  w.db.tables.notification.push(mine, theirs, otherUser);
 
   const list = await w.as(w.users.mgrA1).get("/api/notifications");
   assert.deepEqual(list.body.map((n) => n.id), [mine.id]);
 
   assert.equal((await w.as(w.users.mgrA1).post(`/api/notifications/${theirs.id}/read`)).status, 404);
-  assert.equal((await w.as(w.users.mgrA1).post(`/api/notifications/${otherOrg.id}/read`)).status, 404);
+  assert.equal((await w.as(w.users.mgrA1).post(`/api/notifications/${otherUser.id}/read`)).status, 404);
   assert.equal(w.db.tables.notification.find((n) => n.id === theirs.id).isRead, false);
 
   const ok = await w.as(w.users.mgrA1).post(`/api/notifications/${mine.id}/read`);

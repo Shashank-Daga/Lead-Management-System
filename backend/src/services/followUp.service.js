@@ -4,7 +4,7 @@ const { ApiError } = require("../utils/http");
 const { getLeadForUser, getTeamMemberIds } = require("./lead.service");
 
 function canManageFollowUp(user, lead, teamMemberIds = []) {
-  if (!lead || lead.organizationId !== user.organizationId || lead.isDeleted) return false;
+  if (!lead || lead.isDeleted) return false;
 
   if (user.permissions.has(PERMISSIONS.FOLLOWUP_MANAGE_ALL)) {
     return true;
@@ -132,23 +132,23 @@ async function deleteFollowUp(user, leadId, followUpId) {
   });
 }
 
-/**
+/*
  * The `where` fragment for follow-ups a user may see on dashboards. Breadth of
  * visibility follows LEAD visibility (not follow-up *management* rights, which
  * Managers hold org-wide in the permission table but can only exercise on
  * leads inside their scope):
  *
  *   - LEAD_VIEW_ALL (Admin)        -> every follow-up in the organization.
- *   - anyone else (Manager, Exec)  -> follow-ups they own, plus their direct
- *                                     reports' (Managers only; Executives pass
- *                                     no team ids).
+ *   - LEAD_VIEW_SCOPED (Manager)   -> follow-ups owned by the manager/team.
+ *   - LEAD_VIEW_ASSIGNED (Executive) -> follow-ups owned by the executive.
  *
- * Every branch filters through `lead.organizationId`, so this can never leak
- * another organization's data, even for the org-wide Admin case.
+ * The application serves one organization, so access control is enforced
+ * entirely through RBAC and team ownership rather than organization filters.
  */
+
 function buildFollowUpScopeWhere(user, teamMemberIds = []) {
   const where = {
-    lead: { organizationId: user.organizationId, isDeleted: false },
+    lead: { isDeleted: false },
   };
 
   if (!user.permissions.has(PERMISSIONS.LEAD_VIEW_ALL)) {

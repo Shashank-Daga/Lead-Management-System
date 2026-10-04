@@ -1,8 +1,8 @@
-// Builds a two-organization world in the in-memory database and returns the
+﻿// Builds a single-organization world in the in-memory database and returns the
 // real Express app bound to it, plus helpers to call it as any user.
 //
-//   Org A: admin, mgrA1 (team: execA1, execA2), mgrA2 (team: execA3)
-//   Org B: adminB, mgrB (team: execB)
+//   Admin: admin, adminB; Managers: mgrA1, mgrA2, mgrB; Executives: execA1, execA2, execA3, execB
+//   Manager teams: mgrA1 -> execA1, execA2; mgrA2 -> execA3; mgrB -> execB
 //
 // Each test calls buildWorld() for a fresh, isolated dataset.
 process.env.JWT_ACCESS_SECRET = "world_access_secret_0123456789abcdef0123";
@@ -31,14 +31,10 @@ function buildWorld() {
       permissions: perms.map((p) => ({ permission: { key: p } })),
     };
   }
-
-  const orgA = id();
-  const orgB = id();
   const users = {};
-  const addUser = (name, org, roleKey, managerId = null, extra = {}) => {
+  const addUser = (name, roleKey, managerId = null, extra = {}) => {
     const u = {
       id: id(),
-      organizationId: org,
       fullName: name,
       email: `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
       passwordHash: "x",
@@ -54,21 +50,20 @@ function buildWorld() {
     return u;
   };
 
-  const admin = addUser("Admin A", orgA, "ADMIN");
-  const mgrA1 = addUser("Manager A1", orgA, "MANAGER");
-  const mgrA2 = addUser("Manager A2", orgA, "MANAGER");
-  const execA1 = addUser("Exec A1", orgA, "EXECUTIVE", mgrA1.id);
-  const execA2 = addUser("Exec A2", orgA, "EXECUTIVE", mgrA1.id);
-  const execA3 = addUser("Exec A3", orgA, "EXECUTIVE", mgrA2.id);
-  const adminB = addUser("Admin B", orgB, "ADMIN");
-  const mgrB = addUser("Manager B", orgB, "MANAGER");
-  const execB = addUser("Exec B", orgB, "EXECUTIVE", mgrB.id);
+  const admin = addUser("Admin A", "ADMIN");
+  const mgrA1 = addUser("Manager A1", "MANAGER");
+  const mgrA2 = addUser("Manager A2", "MANAGER");
+  const execA1 = addUser("Exec A1", "EXECUTIVE", mgrA1.id);
+  const execA2 = addUser("Exec A2", "EXECUTIVE", mgrA1.id);
+  const execA3 = addUser("Exec A3", "EXECUTIVE", mgrA2.id);
+  const adminB = addUser("Admin B", "ADMIN");
+  const mgrB = addUser("Manager B", "MANAGER");
+  const execB = addUser("Exec B", "EXECUTIVE", mgrB.id);
 
-  const addLead = (org, code, name, assignee, creator, extra = {}) => {
+  const addLead = (code, name, assignee, creator, extra = {}) => {
     const lead = {
       id: id(),
       leadCode: code,
-      organizationId: org,
       clientName: name,
       contactPerson: "Contact",
       phone: "9999999999",
@@ -88,13 +83,13 @@ function buildWorld() {
     return lead;
   };
 
-  const leadA1 = addLead(orgA, "LD-000001", "Acme A1", execA1, mgrA1);
-  const leadA2 = addLead(orgA, "LD-000002", "Bolt A2", execA2, mgrA1);
-  const leadA3 = addLead(orgA, "LD-000003", "Core A3", execA3, mgrA2);
-  const leadB1 = addLead(orgB, "LD-000101", "Zeta B1", execB, mgrB);
+  const leadA1 = addLead("LD-000001", "Acme A1", execA1, mgrA1);
+  const leadA2 = addLead("LD-000002", "Bolt A2", execA2, mgrA1);
+  const leadA3 = addLead("LD-000003", "Core A3", execA3, mgrA2);
+  const leadB1 = addLead("LD-000101", "Zeta B1", execB, mgrB);
   // Resolved leads for execA1 (dashboard numbers)
-  addLead(orgA, "LD-000004", "Done Won", execA1, mgrA1, { status: "CONVERTED", assignmentDate: new Date(Date.now() - 30 * 24 * HOUR) });
-  addLead(orgA, "LD-000005", "Done Lost", execA1, mgrA1, { status: "LOST", assignmentDate: new Date(Date.now() - 30 * 24 * HOUR) });
+  addLead("LD-000004", "Done Won", execA1, mgrA1, { status: "CONVERTED", assignmentDate: new Date(Date.now() - 30 * 24 * HOUR) });
+  addLead("LD-000005", "Done Lost", execA1, mgrA1, { status: "LOST", assignmentDate: new Date(Date.now() - 30 * 24 * HOUR) });
 
   const addFollowUp = (lead, owner, dueAt, extra = {}) => {
     const f = { id: id(), leadId: lead.id, ownerId: owner.id, dueAt, notes: null, status: "PENDING", createdAt: new Date(), updatedAt: new Date(), ...extra };
@@ -117,7 +112,7 @@ function buildWorld() {
   const noteExecA1 = addNote(leadA1, execA1, "exec note");
   const noteMgrA1 = addNote(leadA1, mgrA1, "manager note");
   const noteA2 = addNote(leadA2, execA2, "peer note");
-  const noteB1 = addNote(leadB1, execB, "org b note");
+  const noteB1 = addNote(leadB1, execB, "peer manager team note");
 
   installFakePrisma(db);
   const app = require("../../src/app");
@@ -136,7 +131,7 @@ function buildWorld() {
 
   return {
     db, app, as, request: () => request(app),
-    orgA, orgB, roles,
+    roles,
     users: { admin, mgrA1, mgrA2, execA1, execA2, execA3, adminB, mgrB, execB },
     leads: { leadA1, leadA2, leadA3, leadB1 },
     followUps: { fuA1, fuA1Upcoming, fuA2, fuA3, fuB1 },

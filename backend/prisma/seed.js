@@ -1,4 +1,4 @@
-// Seeds: an Organization, all Permissions, the three baseline Roles wired to
+// Seeds all Permissions, the three baseline Roles, and baseline users.
 // their default permissions, and one login-ready user per role.
 //
 // Run with: npm run seed  (after `npx prisma migrate dev`)
@@ -12,11 +12,6 @@ const prisma = new PrismaClient();
 const SEED_PASSWORD = "ChangeMe123!"; // demo only — rotate before real use
 
 async function main() {
-  const org = await prisma.organization.upsert({
-    where: { id: "00000000-0000-0000-0000-000000000001" },
-    update: {},
-    create: { id: "00000000-0000-0000-0000-000000000001", name: "Demo Organization" },
-  });
 
   // Permissions
   for (const key of Object.values(PERMISSIONS)) {
@@ -48,7 +43,6 @@ async function main() {
     where: { email: "admin@demo.com" },
     update: {},
     create: {
-      organizationId: org.id,
       fullName: "Ava Admin",
       email: "admin@demo.com",
       passwordHash,
@@ -60,7 +54,6 @@ async function main() {
     where: { email: "manager@demo.com" },
     update: {},
     create: {
-      organizationId: org.id,
       fullName: "Mia Manager",
       email: "manager@demo.com",
       passwordHash,
@@ -72,7 +65,6 @@ async function main() {
     where: { email: "executive@demo.com" },
     update: {},
     create: {
-      organizationId: org.id,
       fullName: "Eli Executive",
       email: "executive@demo.com",
       passwordHash,
