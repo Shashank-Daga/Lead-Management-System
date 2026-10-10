@@ -1,126 +1,507 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   Badge,
   Box,
-  CircularProgress,
   Divider,
   IconButton,
   Menu,
   MenuItem,
+  Stack,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
-import { useSnackbar } from "notistack";
-import { useListNotificationsQuery, useMarkNotificationReadMutation } from "../../api/apiSlice";
 
-const POLL_INTERVAL_MS = 30000; // polling is sufficient for MVP; no websockets
+import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
+import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+
+import { useSnackbar } from "notistack";
+
+import {
+  useListNotificationsQuery,
+  useMarkNotificationReadMutation,
+} from "../../api/apiSlice";
+
+
+const POLL_INTERVAL_MS = 30000;
+
+
+function formatNotificationDate(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleString();
+}
+
+
+function NotificationItem({
+  notification,
+  onClick,
+}) {
+  const unread = !notification.isRead;
+
+  return (
+    <MenuItem
+      onClick={() => onClick(notification)}
+      sx={{
+        display: "block",
+        whiteSpace: "normal",
+        px: 2,
+        py: 1.5,
+        borderLeft: unread
+          ? "3px solid"
+          : "3px solid transparent",
+        borderColor: unread
+          ? "primary.main"
+          : "transparent",
+        bgcolor: unread
+          ? "action.hover"
+          : "transparent",
+        "&:hover": {
+          bgcolor: "action.selected",
+        },
+      }}
+    >
+      <Stack spacing={0.6}>
+
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="flex-start"
+        >
+          <Box flex={1} minWidth={0}>
+            <Typography
+              variant="body2"
+              fontWeight={unread ? 700 : 500}
+              sx={{
+                wordBreak: "break-word",
+              }}
+            >
+              {notification.title}
+            </Typography>
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                mt: 0.35,
+                lineHeight: 1.45,
+                wordBreak: "break-word",
+              }}
+            >
+              {notification.message}
+            </Typography>
+          </Box>
+
+          {unread && (
+            <Box
+              sx={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                bgcolor: "primary.main",
+                flexShrink: 0,
+                mt: 0.7,
+              }}
+            />
+          )}
+        </Stack>
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+        >
+          {formatNotificationDate(
+            notification.createdAt
+          )}
+        </Typography>
+
+        {notification.metadata?.leadId && (
+          <Stack
+            direction="row"
+            spacing={0.5}
+            alignItems="center"
+            sx={{
+              color: "primary.main",
+              pt: 0.25,
+            }}
+          >
+            <Typography
+              variant="caption"
+              fontWeight={600}
+            >
+              Open lead
+            </Typography>
+
+            <ArrowForwardRoundedIcon
+              sx={{ fontSize: 14 }}
+            />
+          </Stack>
+        )}
+
+      </Stack>
+    </MenuItem>
+  );
+}
+
 
 export default function NotificationBell() {
   const navigate = useNavigate();
-  const [anchor, setAnchor] = useState(null);
-  const { data, isLoading, isError } = useListNotificationsQuery(undefined, {
-    pollingInterval: POLL_INTERVAL_MS,
-  });
-  const [markRead] = useMarkNotificationReadMutation();
-  const { enqueueSnackbar } = useSnackbar();
+
+  const theme = useTheme();
+
+  const isMobile = useMediaQuery(
+    theme.breakpoints.down("sm")
+  );
+
+  const [anchor, setAnchor] =
+    useState(null);
+
+  const {
+    data,
+    isLoading,
+    isError,
+  } = useListNotificationsQuery(
+    undefined,
+    {
+      pollingInterval:
+        POLL_INTERVAL_MS,
+    }
+  );
+
+  const [markRead] =
+    useMarkNotificationReadMutation();
+
+  const { enqueueSnackbar } =
+    useSnackbar();
+
 
   const notifications = data || [];
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const unreadCount =
+    notifications.filter(
+      (notification) =>
+        !notification.isRead
+    ).length;
+
 
   /**
-   * Resolves where a notification should take the user, from its metadata.
-   * Falls back to `null` (no navigation) for notification types nothing else
-   * links to yet, rather than guessing at a URL.
+   * Resolves where a notification should take
+   * the user, using only destinations that
+   * already exist in the application.
    */
-  const resolveDestination = (notification) => {
-    const meta = notification.metadata || {};
-    if (meta.leadId) return `/leads/${meta.leadId}`;
+  const resolveDestination = (
+    notification
+  ) => {
+    const meta =
+      notification.metadata || {};
+
+    if (meta.leadId) {
+      return `/leads/${meta.leadId}`;
+    }
+
     if (meta.executiveId) {
-      // No standalone per-executive page exists — the most useful equivalent
-      // context is "this executive's leads", which the Leads list can filter
-      // to via a deep-linked (not otherwise exposed) assignedTo param.
-      const params = new URLSearchParams({ assignedTo: meta.executiveId });
-      if (meta.executiveName) params.set("assignedToName", meta.executiveName);
+      const params =
+        new URLSearchParams({
+          assignedTo:
+            meta.executiveId,
+        });
+
+      if (meta.executiveName) {
+        params.set(
+          "assignedToName",
+          meta.executiveName
+        );
+      }
+
       return `/leads?${params.toString()}`;
     }
+
     return null;
   };
 
-  const handleClick = async (notification) => {
-    const destination = resolveDestination(notification);
+
+  const handleOpen = (event) => {
+    setAnchor(event.currentTarget);
+  };
+
+
+  const handleClose = () => {
+    setAnchor(null);
+  };
+
+
+  const handleClick = async (
+    notification
+  ) => {
+    const destination =
+      resolveDestination(
+        notification
+      );
+
+
     if (!notification.isRead) {
       try {
-        await markRead(notification.id).unwrap();
+        await markRead(
+          notification.id
+        ).unwrap();
       } catch (err) {
-        enqueueSnackbar(err?.data?.message || "Could not mark notification as read", {
-          variant: "error",
-        });
-        // Still navigate — a failed read-receipt shouldn't strand the user on
-        // a dead menu when they clearly wanted to go look at the lead/team.
+        enqueueSnackbar(
+          err?.data?.message ||
+            "Could not mark notification as read",
+          {
+            variant: "error",
+          }
+        );
+
+        // Navigation still proceeds.
       }
     }
-    setAnchor(null);
-    if (destination) navigate(destination);
+
+
+    handleClose();
+
+
+    if (destination) {
+      navigate(destination);
+    }
   };
+
 
   return (
     <>
-      <IconButton onClick={(e) => setAnchor(e.currentTarget)} aria-label="Notifications" sx={{ mr: 1 }}>
-        <Badge badgeContent={unreadCount} color="error" max={99}>
-          <NotificationsNoneIcon />
+      <IconButton
+        onClick={handleOpen}
+        aria-label={
+          unreadCount > 0
+            ? `${unreadCount} unread notifications`
+            : "Notifications"
+        }
+        sx={{
+          mr: 1,
+          width: 42,
+          height: 42,
+        }}
+      >
+        <Badge
+          badgeContent={
+            unreadCount > 99
+              ? "99+"
+              : unreadCount
+          }
+          color="error"
+          overlap="circular"
+        >
+          {unreadCount > 0 ? (
+            <NotificationsActiveOutlinedIcon />
+          ) : (
+            <NotificationsNoneRoundedIcon />
+          )}
         </Badge>
       </IconButton>
+
+
       <Menu
         anchorEl={anchor}
         open={Boolean(anchor)}
-        onClose={() => setAnchor(null)}
-        PaperProps={{ sx: { width: 360, maxHeight: 420 } }}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+        PaperProps={{
+          sx: {
+            width: isMobile
+              ? "calc(100vw - 24px)"
+              : 380,
+
+            maxWidth: 380,
+
+            maxHeight: {
+              xs: "70vh",
+              sm: 480,
+            },
+
+            borderRadius: 2.5,
+            mt: 1,
+          },
+        }}
+        MenuListProps={{
+          disablePadding: true,
+        }}
       >
-        <Box sx={{ px: 2, py: 1 }}>
-          <Typography variant="subtitle2">Notifications</Typography>
+
+        {/* Header */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+          }}
+        >
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Box>
+              <Typography
+                variant="subtitle1"
+                fontWeight={750}
+              >
+                Notifications
+              </Typography>
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >
+                {unreadCount > 0
+                  ? `${unreadCount} unread`
+                  : "You're all caught up"}
+              </Typography>
+            </Box>
+
+            {unreadCount > 0 && (
+              <Box
+                sx={{
+                  minWidth: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor:
+                    "error.main",
+                }}
+              />
+            )}
+          </Stack>
         </Box>
+
+
         <Divider />
+
+
+        {/* Loading */}
         {isLoading && (
-          <Box display="flex" justifyContent="center" py={3}>
-            <CircularProgress size={22} />
-          </Box>
-        )}
-        {isError && (
-          <Box px={2} py={2}>
-            <Typography variant="body2" color="error">
-              Could not load notifications.
-            </Typography>
-          </Box>
-        )}
-        {!isLoading && !isError && notifications.length === 0 && (
-          <Box px={2} py={3}>
-            <Typography variant="body2" color="text.secondary">
-              You&apos;re all caught up.
-            </Typography>
-          </Box>
-        )}
-        {notifications.map((n) => (
-          <MenuItem
-            key={n.id}
-            onClick={() => handleClick(n)}
+          <Box
             sx={{
-              display: "block",
-              whiteSpace: "normal",
-              bgcolor: n.isRead ? "transparent" : "action.hover",
+              px: 2,
+              py: 4,
+              textAlign: "center",
             }}
           >
-            <Typography variant="body2" fontWeight={n.isRead ? 400 : 700}>
-              {n.title}
+            <NotificationsNoneRoundedIcon
+              color="disabled"
+              sx={{
+                fontSize: 30,
+                mb: 1,
+              }}
+            />
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+            >
+              Loading notifications…
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {n.message}
+          </Box>
+        )}
+
+
+        {/* Error */}
+        {isError && (
+          <Box
+            sx={{
+              px: 2,
+              py: 3,
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="error"
+              fontWeight={600}
+            >
+              Could not load notifications.
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {new Date(n.createdAt).toLocaleString()}
+
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                display: "block",
+                mt: 0.5,
+              }}
+            >
+              Please try again in a moment.
             </Typography>
-          </MenuItem>
-        ))}
+          </Box>
+        )}
+
+
+        {/* Empty */}
+        {!isLoading &&
+          !isError &&
+          notifications.length === 0 && (
+            <Box
+              sx={{
+                px: 2,
+                py: 4,
+                textAlign: "center",
+              }}
+            >
+              <NotificationsNoneRoundedIcon
+                color="disabled"
+                sx={{
+                  fontSize: 36,
+                  mb: 1,
+                }}
+              />
+
+              <Typography
+                variant="body2"
+                fontWeight={600}
+              >
+                You're all caught up
+              </Typography>
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  mt: 0.5,
+                }}
+              >
+                New notifications will appear
+                here automatically.
+              </Typography>
+            </Box>
+          )}
+
+
+        {/* Notifications */}
+        {!isLoading &&
+          !isError &&
+          notifications.map(
+            (notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={
+                  notification
+                }
+                onClick={handleClick}
+              />
+            )
+          )}
+
       </Menu>
     </>
   );
