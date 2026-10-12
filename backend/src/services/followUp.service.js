@@ -106,11 +106,21 @@ async function listFollowUps(user, leadId) {
     throw new ApiError(403, "You do not have permission to view follow-ups for this lead.");
   }
 
-  return prisma.followUp.findMany({
-    where: { leadId },
+  // Same ownership/hierarchy rule as the dashboards, so the lead tab can never
+  // reveal a follow-up the dashboards would hide (e.g. another team's).
+  const followUps = await prisma.followUp.findMany({
+    where: { leadId, ...buildFollowUpScopeWhere(user, teamMemberIds) },
     orderBy: { dueAt: "asc" },
-    include: { owner: { select: { id: true, fullName: true } } },
+    include: {
+      owner: { select: { id: true, fullName: true } },
+      lead: { select: { currentAssignee: { select: { id: true, fullName: true } } } },
+    },
   });
+
+  return followUps.map(({ lead: leadInfo, ...followUp }) => ({
+    ...followUp,
+    owner: leadInfo?.currentAssignee ?? followUp.owner,
+  }));
 }
 
 async function deleteFollowUp(user, leadId, followUpId) {
@@ -133,15 +143,21 @@ async function deleteFollowUp(user, leadId, followUpId) {
 }
 
 /*
- * The `where` fragment for follow-ups a user may see on dashboards. Breadth of
- * visibility follows LEAD visibility (not follow-up *management* rights, which
- * Managers hold org-wide in the permission table but can only exercise on
- * leads inside their scope):
+ * The `where` fragment for follow-ups a user may see. Visibility depends on who
+ * the follow-up CURRENTLY belongs to, never on who created it:
  *
- *   - LEAD_VIEW_ALL (Admin)        -> every follow-up in the organization.
- *   - LEAD_VIEW_SCOPED (Manager)   -> follow-ups owned by the manager/team.
- *   - LEAD_VIEW_ASSIGNED (Executive) -> follow-ups owned by the executive.
+ *   A follow-up belongs to the current assignee of its lead. (`ownerId` records
+ *   who created it; it only decides ownership while the lead is unassigned.)
+ *   Because this is read from the lead at query time, reassigning a lead moves
+ *   its follow-ups' visibility immediately, including follow-ups created
+ *   earlier by an Admin.
  *
+ *   - LEAD_VIEW_ALL (Admin)  -> every follow-up on a non-deleted lead.
+ *   - Manager                -> follow-ups on leads assigned to the manager or
+ *                               to one of the manager's active direct reports.
+ *   - Executive              -> follow-ups on leads assigned to the executive.
+ *
+ * Overdue / upcoming status is applied by the callers and never widens access.
  * The application serves one organization, so access control is enforced
  * entirely through RBAC and team ownership rather than organization filters.
  */
@@ -151,21 +167,45 @@ function buildFollowUpScopeWhere(user, teamMemberIds = []) {
     lead: { isDeleted: false },
   };
 
-  if (!user.permissions.has(PERMISSIONS.LEAD_VIEW_ALL)) {
-    where.ownerId = { in: [user.id, ...teamMemberIds] };
+  if (user.permissions.has(PERMISSIONS.LEAD_VIEW_ALL)) {
+    return where;
   }
+
+  const scopeIds = [user.id, ...teamMemberIds];
+
+  // Not `where.lead.OR`: the unassigned-lead branch also needs `ownerId`.
+  where.OR = [
+    { lead: { isDeleted: false, currentAssigneeId: { in: scopeIds } } },
+    { ownerId: { in: scopeIds }, lead: { isDeleted: false, currentAssigneeId: null } },
+  ];
 
   return where;
 }
 
 const FOLLOWUP_INCLUDE = {
-  lead: { select: { id: true, leadCode: true, clientName: true } },
+  lead: {
+    select: {
+      id: true,
+      leadCode: true,
+      clientName: true,
+      currentAssignee: { select: { id: true, fullName: true } },
+    },
+  },
   owner: { select: { id: true, fullName: true } },
 };
 
+/**
+ * API shape: `owner` is the follow-up's current owner (the lead's assignee),
+ * falling back to the creator while the lead is unassigned.
+ */
+function withCurrentOwner({ lead, ...followUp }) {
+  const { currentAssignee, ...leadInfo } = lead;
+  return { ...followUp, lead: leadInfo, owner: currentAssignee ?? followUp.owner };
+}
+
 /** Pending follow-ups whose due time has passed, within the user's scope. */
 async function listOverdueFollowUps(user, teamMemberIds = []) {
-  return prisma.followUp.findMany({
+  const rows = await prisma.followUp.findMany({
     where: {
       ...buildFollowUpScopeWhere(user, teamMemberIds),
       status: "PENDING",
@@ -174,11 +214,12 @@ async function listOverdueFollowUps(user, teamMemberIds = []) {
     orderBy: { dueAt: "asc" },
     include: FOLLOWUP_INCLUDE,
   });
+  return rows.map(withCurrentOwner);
 }
 
 /** Next pending follow-ups that are not yet overdue, within the user's scope. */
 async function listUpcomingFollowUps(user, teamMemberIds = [], take = 5) {
-  return prisma.followUp.findMany({
+  const rows = await prisma.followUp.findMany({
     where: {
       ...buildFollowUpScopeWhere(user, teamMemberIds),
       status: "PENDING",
@@ -188,6 +229,7 @@ async function listUpcomingFollowUps(user, teamMemberIds = [], take = 5) {
     take,
     include: FOLLOWUP_INCLUDE,
   });
+  return rows.map(withCurrentOwner);
 }
 
 /** Count of pending follow-ups due between `from` and `to` (used for "due today"). */

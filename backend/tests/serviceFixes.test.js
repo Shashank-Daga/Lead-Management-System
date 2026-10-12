@@ -5,55 +5,60 @@ const { PERMISSIONS } = require("../src/config/permissions");
 
 
 // ---- A2: overdue follow-up scoping ------------------------------------------
-// The fake evaluates the `where` the service builds against an in-memory table,
-// so these tests prove the query itself is scoped correctly.
-function fakeFollowUpTable(rows) {
-  return {
-    followUp: {
-      findMany: async ({ where }) =>
-        rows.filter((r) => {
-          if (where.status && r.status !== where.status) return false;
-          if (where.dueAt && !(r.dueAt < where.dueAt.lt)) return false;
-          if (where.ownerId?.in && !where.ownerId.in.includes(r.ownerId)) return false;
-          return true;
-        }),
-    },
-  };
+// Follow-up visibility follows the lead's CURRENT assignee (see
+// followUpVisibility.test.js for the HTTP-level suite). These service-level
+// tests run the exact `where` the service builds through the in-memory database
+// evaluator, so they prove the query itself is scoped correctly.
+const { createMemoryDb } = require("./helpers/memoryDb");
+
+function followUpDb() {
+  const db = createMemoryDb();
+  const past = new Date(Date.now() - 86400000);
+  db.tables.lead.push(
+    { id: "L1", isDeleted: false, currentAssigneeId: "exec1" },
+    { id: "L2", isDeleted: false, currentAssigneeId: "exec2" },
+    { id: "LX", isDeleted: false, currentAssigneeId: "execX" },
+    { id: "LB", isDeleted: false, currentAssigneeId: "execB" },
+  );
+  db.tables.users.push(
+    ...["exec1", "exec2", "execX", "execB", "admin"].map((id) => ({ id, fullName: id })),
+  );
+  const add = (id, leadId, ownerId, status = "PENDING") =>
+    db.tables.followUp.push({ id, leadId, ownerId, status, dueAt: past });
+  add("f-exec1", "L1", "exec1");
+  add("f-exec2", "L2", "exec2");
+  add("f-other-team", "LX", "execX");
+  add("f-other-manager", "LB", "execB");
+  add("f-done", "L1", "exec1", "COMPLETED");
+  // Created by Admin, but the lead belongs to exec1.
+  add("f-admin-created", "L1", "admin");
+  return db;
 }
 
-const past = new Date(Date.now() - 86400000);
-const rows = [
-  { id: "f-exec1", ownerId: "exec1", status: "PENDING", dueAt: past, lead: {} },
-  { id: "f-exec2", ownerId: "exec2", status: "PENDING", dueAt: past, lead: {} },
-  { id: "f-other-team", ownerId: "execX", status: "PENDING", dueAt: past, lead: {} },
-  { id: "f-other-manager", ownerId: "execB", status: "PENDING", dueAt: past, lead: {} },
-  { id: "f-done", ownerId: "exec1", status: "COMPLETED", dueAt: past, lead: {} },
-];
-
 test("A2: Admin sees other users' overdue follow-ups org-wide", async () => {
-  installFakePrisma(fakeFollowUpTable(rows));
+  installFakePrisma(followUpDb());
   const svc = require("../src/services/followUp.service");
   const admin = makeUser({ id: "admin", roleKey: "ADMIN", permissions: new Set([PERMISSIONS.FOLLOWUP_MANAGE_ALL, PERMISSIONS.LEAD_VIEW_ALL]) });
   const ids = (await svc.listOverdueFollowUps(admin, [])).map((f) => f.id).sort();
-  assert.deepEqual(ids, ["f-exec1", "f-exec2", "f-other-manager", "f-other-team"]);
+  assert.deepEqual(ids, ["f-admin-created", "f-exec1", "f-exec2", "f-other-manager", "f-other-team"]);
 });
 
 test("A2: Manager sees team follow-ups but not an unrelated team's", async () => {
-  installFakePrisma(fakeFollowUpTable(rows));
+  installFakePrisma(followUpDb());
   const svc = require("../src/services/followUp.service");
   // Managers really hold followup.manage_all; they must still be team-scoped.
   const mgr = makeUser({ id: "mgr", roleKey: "MANAGER", permissions: new Set([PERMISSIONS.FOLLOWUP_MANAGE_ALL, PERMISSIONS.LEAD_VIEW_SCOPED]) });
   const ids = (await svc.listOverdueFollowUps(mgr, ["exec1", "exec2"])).map((f) => f.id).sort();
-  assert.deepEqual(ids, ["f-exec1", "f-exec2"]);
+  assert.deepEqual(ids, ["f-admin-created", "f-exec1", "f-exec2"]);
   assert.ok(!ids.includes("f-other-team"));
 });
 
-test("A2: Executive sees only own follow-ups", async () => {
-  installFakePrisma(fakeFollowUpTable(rows));
+test("A2: Executive sees follow-ups on their own leads, whoever created them", async () => {
+  installFakePrisma(followUpDb());
   const svc = require("../src/services/followUp.service");
   const exec = makeUser({ id: "exec1", permissions: new Set([PERMISSIONS.FOLLOWUP_MANAGE_ASSIGNED]) });
-  const ids = (await svc.listOverdueFollowUps(exec, [])).map((f) => f.id);
-  assert.deepEqual(ids, ["f-exec1"]);
+  const ids = (await svc.listOverdueFollowUps(exec, [])).map((f) => f.id).sort();
+  assert.deepEqual(ids, ["f-admin-created", "f-exec1"]);
 });
 
 // ---- A3: assignment history names ---------------------------------------------
