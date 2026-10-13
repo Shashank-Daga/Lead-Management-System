@@ -12,6 +12,7 @@ const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const LeadsListPage = lazy(() => import("./pages/leads/LeadsListPage"));
 const LeadDetailPage = lazy(() => import("./pages/leads/LeadDetailPage"));
 const UsersPage = lazy(() => import("./pages/users/UsersPage"));
+const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
 
 function PageLoader() {
   return (
@@ -39,6 +40,8 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
 
               <Route path="/leads" element={<LeadsListPage />} />
+
+              <Route path="/profile" element={<ProfilePage />} />
 
               <Route
                 path="/leads/:leadId"

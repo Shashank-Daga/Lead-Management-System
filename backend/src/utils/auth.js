@@ -42,7 +42,18 @@ function verifyRefreshToken(token) {
   return payload;
 }
 
+/**
+ * True when a token was issued before the user's last password change, so a
+ * password change signs out every other session (including stolen tokens).
+ * JWT `iat` is whole seconds, hence the floor on the timestamp side.
+ */
+function isIssuedBeforePasswordChange(payload, user) {
+  if (!user.passwordChangedAt || !payload.iat) return false;
+  return payload.iat < Math.floor(new Date(user.passwordChangedAt).getTime() / 1000);
+}
+
 module.exports = {
+  isIssuedBeforePasswordChange,
   hashPassword,
   verifyPassword,
   signAccessToken,

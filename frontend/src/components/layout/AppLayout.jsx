@@ -24,6 +24,7 @@ import DashboardIcon from "@mui/icons-material/SpaceDashboardOutlined";
 import LeadsIcon from "@mui/icons-material/GroupsOutlined";
 import UsersIcon from "@mui/icons-material/BadgeOutlined";
 import LogoutIcon from "@mui/icons-material/LogoutOutlined";
+import ProfileIcon from "@mui/icons-material/AccountCircleOutlined";
 import MenuIcon from "@mui/icons-material/MenuOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeftOutlined";
 
@@ -53,6 +54,7 @@ const PAGE_TITLES = {
   "/dashboard": "Dashboard",
   "/leads": "Leads",
   "/users": "Users",
+  "/profile": "My Profile",
 };
 
 function getPageTitle(pathname) {
@@ -116,6 +118,11 @@ export default function AppLayout() {
       setMobileOpen(false);
     }
   }, [location.pathname, isMobile]);
+
+  const handleOpenProfile = () => {
+    setMenuAnchor(null);
+    navigate("/profile");
+  };
 
   const handleLogout = () => {
     setMenuAnchor(null);
@@ -454,6 +461,21 @@ export default function AppLayout() {
             </Box>
 
             <Divider />
+
+            <MenuItem
+              onClick={handleOpenProfile}
+              sx={{ gap: 1 }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: "auto !important",
+                }}
+              >
+                <ProfileIcon fontSize="small" />
+              </ListItemIcon>
+
+              My profile
+            </MenuItem>
 
             <MenuItem
               onClick={handleLogout}

@@ -4,7 +4,7 @@ import axiosBaseQuery from "./axiosBaseQuery";
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: axiosBaseQuery(),
-  tagTypes: ["Lead", "LeadList", "Notes", "History", "FollowUps", "Users", "Dashboard", "Notifications"],
+  tagTypes: ["Lead", "LeadList", "Notes", "History", "FollowUps", "Users", "Dashboard", "Notifications", "Me", "Profile"],
   endpoints: (builder) => ({
     // ---- Auth -------------------------------------------------------------
     login: builder.mutation({
@@ -12,6 +12,33 @@ export const apiSlice = createApi({
     }),
     getMe: builder.query({
       query: () => ({ url: "/auth/me" }),
+      providesTags: ["Me"],
+    }),
+
+    // ---- Profile ------------------------------------------------------------
+    getProfile: builder.query({
+      query: () => ({ url: "/profile" }),
+      providesTags: ["Profile"],
+    }),
+
+    updateProfile: builder.mutation({
+      query: (body) => ({ url: "/profile", method: "PATCH", data: body }),
+      // "Me" refreshes the signed-in user (e.g. a changed login email) everywhere.
+      invalidatesTags: ["Profile", "Me", "Users"],
+    }),
+
+    changePassword: builder.mutation({
+      query: (body) => ({ url: "/profile/password", method: "POST", data: body }),
+    }),
+
+    listProfiles: builder.query({
+      query: () => ({ url: "/profile/users" }),
+      providesTags: ["Profile"],
+    }),
+
+    getProfileById: builder.query({
+      query: (userId) => ({ url: `/profile/users/${userId}` }),
+      providesTags: ["Profile"],
     }),
 
     // ---- Leads --------------------------------------------------------------
@@ -166,6 +193,11 @@ export const apiSlice = createApi({
 export const {
   useLoginMutation,
   useGetMeQuery,
+  useGetProfileQuery,
+  useUpdateProfileMutation,
+  useChangePasswordMutation,
+  useListProfilesQuery,
+  useGetProfileByIdQuery,
   useListLeadsQuery,
   useGetLeadQuery,
   useCreateLeadMutation,

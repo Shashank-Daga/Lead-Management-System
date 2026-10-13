@@ -5,6 +5,7 @@ const {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
+  isIssuedBeforePasswordChange,
 } = require("../utils/auth");
 
 async function login(email, password) {
@@ -52,6 +53,9 @@ async function refresh(refreshToken) {
     include: { role: true },
   });
   if (!user || !user.isActive) throw new ApiError(401, "Account no longer active.");
+  if (isIssuedBeforePasswordChange(payload, user)) {
+    throw new ApiError(401, "Invalid or expired refresh token.");
+  }
 
   return { accessToken: signAccessToken(user) };
 }

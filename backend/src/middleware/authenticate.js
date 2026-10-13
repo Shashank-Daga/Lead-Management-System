@@ -1,5 +1,5 @@
 const prisma = require("../config/prisma");
-const { verifyAccessToken } = require("../utils/auth");
+const { verifyAccessToken, isIssuedBeforePasswordChange } = require("../utils/auth");
 const { ApiError, asyncHandler } = require("../utils/http");
 
 /**
@@ -27,6 +27,10 @@ const authenticate = asyncHandler(async (req, res, next) => {
 
   if (!user || !user.isActive) {
     throw new ApiError(401, "Account is inactive or no longer exists.");
+  }
+
+  if (isIssuedBeforePasswordChange(payload, user)) {
+    throw new ApiError(401, "Your password was changed. Please sign in again.");
   }
 
   req.user = {

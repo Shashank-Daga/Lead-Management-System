@@ -60,7 +60,10 @@ function createMemoryDb() {
         case "lte": return value != null && cmp(value, arg) <= 0;
         case "gt": return value != null && cmp(value, arg) > 0;
         case "gte": return value != null && cmp(value, arg) >= 0;
-        case "equals": return value === arg;
+        case "equals":
+          return cond.mode === "insensitive" && typeof value === "string" && typeof arg === "string"
+            ? value.toLowerCase() === arg.toLowerCase()
+            : value === arg;
         default: throw new Error(`memoryDb: unsupported operator ${op}`);
       }
     });
