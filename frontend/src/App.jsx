@@ -13,6 +13,7 @@ const LeadsListPage = lazy(() => import("./pages/leads/LeadsListPage"));
 const LeadDetailPage = lazy(() => import("./pages/leads/LeadDetailPage"));
 const UsersPage = lazy(() => import("./pages/users/UsersPage"));
 const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
+const DirectoryPage = lazy(() => import("./pages/directory/DirectoryPage"));
 
 function PageLoader() {
   return (
@@ -56,6 +57,19 @@ export default function App() {
                 }
               >
                 <Route path="/users" element={<UsersPage />} />
+              </Route>
+
+              <Route
+                element={
+                  <RequirePermission
+                    permission={[
+                      PERMISSIONS.USER_MANAGE,
+                      PERMISSIONS.LEAD_VIEW_SCOPED,
+                    ]}
+                  />
+                }
+              >
+                <Route path="/directory" element={<DirectoryPage />} />
               </Route>
             </Route>
           </Route>

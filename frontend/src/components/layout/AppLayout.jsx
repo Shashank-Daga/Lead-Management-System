@@ -23,6 +23,7 @@ import {
 import DashboardIcon from "@mui/icons-material/SpaceDashboardOutlined";
 import LeadsIcon from "@mui/icons-material/GroupsOutlined";
 import UsersIcon from "@mui/icons-material/BadgeOutlined";
+import DirectoryIcon from "@mui/icons-material/ContactPhoneOutlined";
 import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import ProfileIcon from "@mui/icons-material/AccountCircleOutlined";
 import MenuIcon from "@mui/icons-material/MenuOutlined";
@@ -54,6 +55,7 @@ const PAGE_TITLES = {
   "/dashboard": "Dashboard",
   "/leads": "Leads",
   "/users": "Users",
+  "/directory": "User Directory",
   "/profile": "My Profile",
 };
 
@@ -87,19 +89,28 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
 
+  const canViewDirectory = usePermission(
+    PERMISSIONS.USER_MANAGE,
+    PERMISSIONS.LEAD_VIEW_SCOPED
+  );
+
   const navItems = useMemo(
-    () =>
-      canManageUsers
+    () => [
+      ...NAV_ITEMS,
+      ...(canManageUsers
+        ? [{ to: "/users", label: "Users", icon: <UsersIcon /> }]
+        : []),
+      ...(canViewDirectory
         ? [
-            ...NAV_ITEMS,
             {
-              to: "/users",
-              label: "Users",
-              icon: <UsersIcon />,
+              to: "/directory",
+              label: "User Directory",
+              icon: <DirectoryIcon />,
             },
           ]
-        : NAV_ITEMS,
-    [canManageUsers]
+        : []),
+    ],
+    [canManageUsers, canViewDirectory]
   );
 
   const pageTitle = getPageTitle(location.pathname);

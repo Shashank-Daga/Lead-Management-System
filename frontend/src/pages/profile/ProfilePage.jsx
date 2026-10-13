@@ -9,7 +9,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Divider,
   Stack,
   TextField,
   Typography,
@@ -17,18 +16,14 @@ import {
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import LockResetOutlinedIcon from "@mui/icons-material/LockResetOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
-import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import { useSnackbar } from "notistack";
 
 import {
   useGetProfileQuery,
   useUpdateProfileMutation,
   useChangePasswordMutation,
-  useListProfilesQuery,
 } from "../../api/apiSlice";
 import { credentialsReceived } from "../../features/auth/authSlice";
-import usePermission from "../../hooks/usePermission";
-import { PERMISSIONS } from "../../config/permissions";
 
 function SectionCard({ icon, title, description, children }) {
   return (
@@ -93,106 +88,9 @@ function roleLabel(profile) {
   return profile?.roleName || profile?.roleKey || "User";
 }
 
-function ProfileDirectory({ canManageUsers, canViewTeam }) {
-  const enabled = canManageUsers || canViewTeam;
-
-  const {
-    data: profiles = [],
-    isLoading,
-    isError,
-    error,
-  } = useListProfilesQuery(undefined, {
-    skip: !enabled,
-  });
-
-  if (!enabled) return null;
-
-  return (
-    <SectionCard
-      icon={<GroupsOutlinedIcon />}
-      title={canManageUsers ? "User directory" : "My team"}
-      description={
-        canManageUsers
-          ? "View account contact details and roles."
-          : "View your profile and active direct reports."
-      }
-    >
-      {isLoading ? (
-        <Box sx={{ display: "grid", placeItems: "center", py: 4 }}>
-          <CircularProgress size={28} />
-        </Box>
-      ) : isError ? (
-        <Alert severity="error">
-          {error?.data?.message || "Unable to load the user directory."}
-        </Alert>
-      ) : profiles.length === 0 ? (
-        <Typography color="text.secondary">
-          No profiles are available.
-        </Typography>
-      ) : (
-        <Stack divider={<Divider flexItem />} spacing={0}>
-          {profiles.map((person) => (
-            <Stack
-              key={person.id}
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1.5}
-              alignItems={{ xs: "flex-start", sm: "center" }}
-              sx={{ py: 1.5 }}
-            >
-              <Avatar
-                sx={{
-                  bgcolor: "primary.main",
-                  width: 40,
-                  height: 40,
-                }}
-              >
-                {initials(person.fullName)}
-              </Avatar>
-
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 650 }}>
-                  {person.fullName}
-                </Typography>
-
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ overflowWrap: "anywhere" }}
-                >
-                  {person.email}
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary">
-                  {person.phone || "No phone number"} · DOB:{" "}
-                  {person.dateOfBirth || "Not provided"}
-                </Typography>
-              </Box>
-
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Chip
-                  size="small"
-                  label={roleLabel(person)}
-                  variant="outlined"
-                />
-
-                {!person.isActive && (
-                  <Chip size="small" label="Inactive" color="default" />
-                )}
-              </Stack>
-            </Stack>
-          ))}
-        </Stack>
-      )}
-    </SectionCard>
-  );
-}
-
 export default function ProfilePage() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
-
-  const canManageUsers = usePermission(PERMISSIONS.USER_MANAGE);
-  const canViewTeam = usePermission(PERMISSIONS.LEAD_VIEW_SCOPED);
 
   const {
     data: profile,
@@ -598,11 +496,6 @@ export default function ProfilePage() {
           </Stack>
         </SectionCard>
       </Box>
-
-      <ProfileDirectory
-        canManageUsers={canManageUsers}
-        canViewTeam={canViewTeam}
-      />
     </Stack>
   );
 }
