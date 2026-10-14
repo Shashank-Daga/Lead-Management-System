@@ -54,16 +54,25 @@ function canViewLead(user, lead, teamMemberIds = []) {
   return false;
 }
 
+/** Lead is the manager's own, a direct report's, or an unassigned lead they created. */
+function isInManagerScope(user, lead, teamMemberIds = []) {
+  if (lead.currentAssigneeId) {
+    return lead.currentAssigneeId === user.id || teamMemberIds.includes(lead.currentAssigneeId);
+  }
+  return lead.createdById === user.id;
+}
+
 function canEditLead(user, lead, teamMemberIds = []) {
   if (lead.isDeleted) return false;
 
   if (user.permissions.has(PERMISSIONS.LEAD_EDIT_ALL)) return true;
 
+  // A Manager works leads that are CURRENTLY theirs or their team's. Having
+  // created a lead only counts while it is still unassigned; once it belongs to
+  // someone outside the team, the creator can still view it but not change it.
   if (
     user.permissions.has(PERMISSIONS.LEAD_EDIT_SCOPED) &&
-    (lead.createdById === user.id ||
-      teamMemberIds.includes(lead.currentAssigneeId) ||
-      lead.currentAssigneeId === user.id)
+    isInManagerScope(user, lead, teamMemberIds)
   ) {
     return true;
   }
@@ -75,6 +84,18 @@ function canEditLead(user, lead, teamMemberIds = []) {
     return true;
   }
 
+  return false;
+}
+
+/**
+ * May this actor change who the lead is assigned to? (Separate from whether the
+ * TARGET is a valid assignee, see canAssignLead.) Admins: any lead. Managers:
+ * only leads currently in their own scope.
+ */
+function canReassignLead(actor, lead, teamMemberIds = []) {
+  if (lead.isDeleted) return false;
+  if (actor.roleKey === "ADMIN") return true;
+  if (actor.roleKey === "MANAGER") return isInManagerScope(actor, lead, teamMemberIds);
   return false;
 }
 
@@ -112,4 +133,6 @@ module.exports = {
   canViewLead,
   canEditLead,
   canAssignLead,
+  canReassignLead,
+  isInManagerScope,
 };

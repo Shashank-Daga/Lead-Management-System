@@ -11,6 +11,7 @@ import {
   Stack,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
@@ -242,6 +243,10 @@ export default function LeadDetailPage() {
   const canDelete = usePermission(
     PERMISSIONS.LEAD_DELETE
   );
+
+  // Closed-out leads (lost / converted) cannot be assigned or reassigned; the
+  // backend enforces this too.
+  const assignLocked = lead?.status === "LOST" || lead?.status === "CONVERTED";
 
 
   const handleDelete = async () => {
@@ -490,29 +495,44 @@ export default function LeadDetailPage() {
                 )}
 
                 {canAssign && (
-                  <Button
-                    variant="outlined"
-                    startIcon={
-                      lead.currentAssignee ? (
-                        <SwapHorizOutlinedIcon />
-                      ) : (
-                        <AssignmentIndOutlinedIcon />
-                      )
+                  <Tooltip
+                    title={
+                      assignLocked
+                        ? `A ${lead.status.toLowerCase()} lead can't be assigned or reassigned. Change its status to reopen it first.`
+                        : ""
                     }
-                    onClick={() =>
-                      setAssignDialogOpen(true)
-                    }
-                    sx={{
-                      flex: {
-                        xs: "1 1 calc(50% - 4px)",
-                        sm: "0 0 auto",
-                      },
-                    }}
                   >
-                    {lead.currentAssignee
-                      ? "Reassign"
-                      : "Assign"}
-                  </Button>
+                    {/* The span lets the tooltip show even though the button is disabled. */}
+                    <Box
+                      component="span"
+                      sx={{
+                        flex: {
+                          xs: "1 1 calc(50% - 4px)",
+                          sm: "0 0 auto",
+                        },
+                      }}
+                    >
+                      <Button
+                        variant="outlined"
+                        disabled={assignLocked}
+                        startIcon={
+                          lead.currentAssignee ? (
+                            <SwapHorizOutlinedIcon />
+                          ) : (
+                            <AssignmentIndOutlinedIcon />
+                          )
+                        }
+                        onClick={() =>
+                          setAssignDialogOpen(true)
+                        }
+                        sx={{ width: { xs: "100%", sm: "auto" } }}
+                      >
+                        {lead.currentAssignee
+                          ? "Reassign"
+                          : "Assign"}
+                      </Button>
+                    </Box>
+                  </Tooltip>
                 )}
 
                 {canChangeStatus && (
@@ -770,6 +790,7 @@ export default function LeadDetailPage() {
           setAssignDialogOpen(false)
         }
         leadId={leadId}
+        currentAssigneeId={lead.currentAssignee?.id ?? null}
       />
 
       {editDialogOpen && (

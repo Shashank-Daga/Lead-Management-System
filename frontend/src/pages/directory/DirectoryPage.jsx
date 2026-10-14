@@ -15,10 +15,12 @@ import {
 } from "@mui/material";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import DownloadIcon from "@mui/icons-material/FileDownloadOutlined";
 
 import { useListProfilesQuery } from "../../api/apiSlice";
 import usePermission from "../../hooks/usePermission";
 import { PERMISSIONS } from "../../config/permissions";
+import Button from "@mui/material/Button";
 
 function SectionCard({ icon, title, description, children }) {
   return (
@@ -96,6 +98,56 @@ function matchesDirectorySearch(person, { name, phone }) {
   }
 
   return true;
+}
+
+function escapeCsvValue(value) {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function exportProfilesToCsv(profiles) {
+  const headers = [
+    "Full Name",
+    "Email",
+    "Mobile Number",
+    "Date of Birth",
+    "Role",
+    "Status",
+  ];
+
+  const rows = profiles.map((person) => [
+    person.fullName,
+    person.email,
+    person.phone || "",
+    person.dateOfBirth || "",
+    roleLabel(person),
+    person.isActive ? "Active" : "Inactive",
+  ]);
+
+  const csvContent = [
+    headers,
+    ...rows,
+  ]
+    .map((row) => row.map(escapeCsvValue).join(","))
+    .join("\r\n");
+
+  // BOM helps spreadsheet applications recognize UTF-8.
+  const blob = new Blob(["\uFEFF", csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+
+  link.href = url;
+  link.download = `user-directory-${date}.csv`;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
 }
 
 export default function DirectoryPage() {
@@ -187,6 +239,20 @@ export default function DirectoryPage() {
                 ),
               }}
             />
+
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={() => exportProfilesToCsv(visibleProfiles)}
+              disabled={visibleProfiles.length === 0}
+              sx={{
+                flexShrink: 0,
+                whiteSpace: "nowrap",
+                minHeight: 40,
+              }}
+            >
+              Export CSV
+            </Button>
           </Stack>
 
           {visibleProfiles.length === 0 ? (

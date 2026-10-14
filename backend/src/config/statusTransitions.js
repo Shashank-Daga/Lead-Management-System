@@ -11,6 +11,10 @@
 
 const ACTIVE_STAGES = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "NEGOTIATION"];
 
+// Leads in these statuses are closed out and cannot be assigned or reassigned.
+// To assign one again it must first be reopened via a status change.
+const NON_ASSIGNABLE_STATUSES = ["LOST", "CONVERTED"];
+
 const TRANSITIONS = {
   NEW: ["CONTACTED", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "CONVERTED", "ON_HOLD", "LOST"],
   CONTACTED: ["NEW", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "CONVERTED", "ON_HOLD", "LOST"],
@@ -36,4 +40,4 @@ function isValidTransition(from, to, previousStatus = null) {
   return (TRANSITIONS[from] || []).includes(to);
 }
 
-module.exports = { TRANSITIONS, ACTIVE_STAGES, isValidTransition };
+module.exports = { TRANSITIONS, ACTIVE_STAGES, NON_ASSIGNABLE_STATUSES, isValidTransition };

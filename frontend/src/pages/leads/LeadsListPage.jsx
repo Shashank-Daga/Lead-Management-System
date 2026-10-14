@@ -823,7 +823,11 @@ export default function LeadsListPage() {
               }
               onClick={handleExport}
               disabled={exporting}
-              fullWidth={isMobile}
+              sx={{
+                flexShrink: 0,
+                whiteSpace: "nowrap",
+                minHeight: 40,
+              }}
             >
               {exporting
                 ? "Exporting…"

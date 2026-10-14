@@ -23,7 +23,7 @@ import { useSnackbar } from "notistack";
 import { useAssignLeadMutation, useListAssignableUsersQuery } from "../../api/apiSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 
-export default function AssignLeadDialog({ open, onClose, leadId }) {
+export default function AssignLeadDialog({ open, onClose, leadId, currentAssigneeId = null }) {
   const [userId, setUserId] = useState("");
   const [reason, setReason] = useState("");
   const [query, setQuery] = useState("");
@@ -35,11 +35,11 @@ export default function AssignLeadDialog({ open, onClose, leadId }) {
   const { enqueueSnackbar } = useSnackbar();
   const currentUser = useSelector(selectCurrentUser);
 
-  // The backend decides who is assignable (Admin: Executives; Manager: self +
-  // own team) and re-validates on submit, so the UI trusts that list and only
-  // drops inactive users. The current user is listed first, labelled "(you)".
+  // The backend decides who is assignable (Admin: Executives; Manager: self + own team) and re-validates on submit, so the UI 
+  // trusts that list and only drops inactive users and the lead's current assignee (assigning a lead to the person who already 
+  // has it changes nothing). The current user is listed first, labelled "(you)".
   const assignableUsers = (users || [])
-  .filter((u) => u.isActive)
+  .filter((u) => u.isActive && u.id !== currentAssigneeId)
   .sort((a, b) => {
     if (a.id === currentUser?.id) return -1;
     if (b.id === currentUser?.id) return 1;

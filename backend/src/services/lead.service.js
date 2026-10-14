@@ -7,8 +7,9 @@ const {
   canViewLead,
   canEditLead,
   canAssignLead,
+  canReassignLead,
 } = require("./leadScope.service");
-const { isValidTransition } = require("../config/statusTransitions");
+const { isValidTransition, NON_ASSIGNABLE_STATUSES } = require("../config/statusTransitions");
 const { PERMISSIONS } = require("../config/permissions");
 const { notifyUser } = require("./notification.service");
 
@@ -249,7 +250,9 @@ async function changeStatus(user, leadId, { status, comment, lossReason }) {
         status: finalStatus,
         previousStatus: finalPreviousStatus,
         updatedById: user.id,
-        conversionDate: finalStatus === "CONVERTED" ? new Date() : lead.conversionDate,
+        // Set on conversion, cleared if the lead is reopened (loss reason is kept on
+        // purpose: it explains the last attempt).
+        conversionDate: finalStatus === "CONVERTED" ? new Date() : null,
         lossReason: finalStatus === "LOST" ? lossReason || lead.lossReason : lead.lossReason,
       },
     });
@@ -291,6 +294,22 @@ async function changePriority(user, leadId, { priority }) {
 
 async function assignLead(user, leadId, { userId, reason }) {
   const lead = await getLeadForUser(user, leadId);
+
+  const reassignTeamIds = user.roleKey === "MANAGER" ? await getTeamMemberIds(user.id) : [];
+  if (!canReassignLead(user, lead, reassignTeamIds)) {
+    throw new ApiError(403, "You do not have permission to reassign this lead.");
+  }
+
+  if (NON_ASSIGNABLE_STATUSES.includes(lead.status)) {
+    throw new ApiError(
+      422,
+      `A ${lead.status.toLowerCase()} lead cannot be assigned or reassigned. Change its status to reopen it first.`
+    );
+  }
+
+  if (lead.currentAssigneeId === userId) {
+    throw new ApiError(422, "This lead is already assigned to that user.");
+  }
 
   const targetUser = await prisma.users.findFirst({
     where: { id: userId, isActive: true },
