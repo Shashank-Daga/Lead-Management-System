@@ -17,6 +17,14 @@ function validateEnv() {
   }
 
   if (process.env.NODE_ENV === "production") {
+    // Without it the API would accept requests from any origin.
+    if (!process.env.CORS_ORIGIN || !process.env.CORS_ORIGIN.trim()) {
+      throw new Error(
+        "CORS_ORIGIN must be set in production (the frontend's URL, e.g. https://your-app.vercel.app). " +
+          "Separate several origins with commas."
+      );
+    }
+
     for (const key of ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"]) {
       const value = process.env[key].trim().toLowerCase();
       if (PLACEHOLDER_VALUES.has(value) || process.env[key].length < 32) {

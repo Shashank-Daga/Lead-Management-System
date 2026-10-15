@@ -20,6 +20,7 @@ import DownloadIcon from "@mui/icons-material/FileDownloadOutlined";
 import { useListProfilesQuery } from "../../api/apiSlice";
 import usePermission from "../../hooks/usePermission";
 import { PERMISSIONS } from "../../config/permissions";
+import { escapeCsvValue } from "../../utils/csv";
 import Button from "@mui/material/Button";
 
 function SectionCard({ icon, title, description, children }) {
@@ -100,11 +101,6 @@ function matchesDirectorySearch(person, { name, phone }) {
   return true;
 }
 
-function escapeCsvValue(value) {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
 function exportProfilesToCsv(profiles) {
   const headers = [
     "Full Name",
@@ -147,7 +143,8 @@ function exportProfilesToCsv(profiles) {
   link.click();
   link.remove();
 
-  URL.revokeObjectURL(url);
+  // Revoking right away can cancel the download in Safari, so give it a moment.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export default function DirectoryPage() {

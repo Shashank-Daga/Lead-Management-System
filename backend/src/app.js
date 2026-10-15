@@ -16,8 +16,24 @@ const profileRoutes = require("./routes/profile.routes");
 
 const app = express();
 
+// The API runs behind Render's reverse proxy. Without this, every request looks
+// like it comes from the proxy's address, so the per-IP rate limiters would
+// treat ALL users as one client. "1" = trust exactly one proxy hop.
+app.set("trust proxy", 1);
+
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+// CORS_ORIGIN may list several origins separated by commas (e.g. production
+// plus a preview URL). It is required in production (see validateEnv).
+const corsOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin: corsOrigins.length > 1 ? corsOrigins : corsOrigins[0],
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 

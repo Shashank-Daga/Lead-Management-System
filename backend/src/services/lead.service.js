@@ -222,9 +222,6 @@ async function changeStatus(user, leadId, { status, comment, lossReason }) {
   const lead = await getLeadForUser(user, leadId);
   await assertCanEdit(user, lead);
 
-  const nextStatus = lead.status === "ON_HOLD" ? status : status;
-  const targetStatus = status === "ON_HOLD" ? "ON_HOLD" : status;
-
   if (lead.status === "ON_HOLD") {
     if (!isValidTransition(lead.status, status, lead.previousStatus)) {
       throw new ApiError(

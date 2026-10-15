@@ -89,8 +89,8 @@ function LeadMobileCard({ lead, onClick }) {
 
   const nextFollowUp = lead.nextFollowUpDate
     ? new Date(
-        lead.nextFollowUpDate
-      ).toLocaleDateString()
+      lead.nextFollowUpDate
+    ).toLocaleDateString()
     : "No follow-up scheduled";
 
   return (
@@ -381,12 +381,11 @@ function MobileLeadList({
         >
           {total === 0
             ? "No results"
-            : `Showing ${
-                page * pageSize + 1
-              }–${Math.min(
-                (page + 1) * pageSize,
-                total
-              )} of ${total}`}
+            : `Showing ${page * pageSize + 1
+            }–${Math.min(
+              (page + 1) * pageSize,
+              total
+            )} of ${total}`}
         </Typography>
 
         {totalPages > 1 && (
@@ -628,8 +627,8 @@ export default function LeadsListPage() {
       valueGetter: (value, row) =>
         row.nextFollowUpDate
           ? new Date(
-              row.nextFollowUpDate
-            ).toLocaleDateString()
+            row.nextFollowUpDate
+          ).toLocaleDateString()
           : "—",
     },
 
@@ -657,9 +656,8 @@ export default function LeadsListPage() {
       );
 
       const response = await fetch(
-        `${
-          import.meta.env
-            .VITE_API_BASE_URL || "/api"
+        `${import.meta.env
+          .VITE_API_BASE_URL || "/api"
         }/dashboard/export/leads.csv`,
         {
           headers: {
@@ -727,28 +725,24 @@ export default function LeadsListPage() {
         return;
       }
 
-      const blob =
-        await response.blob();
+      const blob = await response.blob();
 
-      const url =
-        window.URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(blob);
 
-      try {
-        const a =
-          document.createElement("a");
+      const a = document.createElement("a");
 
-        a.href = url;
-        a.download =
-          "leads-export.csv";
+      a.href = url;
+      a.download = "leads-export.csv";
 
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      } finally {
-        window.URL.revokeObjectURL(
-          url
-        );
-      }
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // Revoking right away can cancel the download in Safari, so give it a moment.
+      setTimeout(
+        () => window.URL.revokeObjectURL(url),
+        1000
+      );
     } catch {
       enqueueSnackbar(
         "Network error while exporting. Please try again.",
@@ -993,96 +987,93 @@ export default function LeadsListPage() {
           {/* Active filters */}
           {(hasFilters ||
             assignedTo) && (
-            <Stack
-              direction="row"
-              flexWrap="wrap"
-              alignItems="center"
-              gap={0.75}
-              sx={{ mt: 1.5 }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mr: 0.25 }}
+              <Stack
+                direction="row"
+                flexWrap="wrap"
+                alignItems="center"
+                gap={0.75}
+                sx={{ mt: 1.5 }}
               >
-                Filters:
-              </Typography>
-
-              {search && (
-                <Chip
-                  size="small"
-                  label={`Search: ${search}`}
-                  onDelete={() =>
-                    setSearch("")
-                  }
-                />
-              )}
-
-              {status && (
-                <Chip
-                  size="small"
-                  label={`Status: ${
-                    STATUS_CONFIG[
-                      status
-                    ]?.label ||
-                    status
-                  }`}
-                  onDelete={() =>
-                    setStatus("")
-                  }
-                />
-              )}
-
-              {priority && (
-                <Chip
-                  size="small"
-                  label={`Priority: ${
-                    PRIORITY_CONFIG[
-                      priority
-                    ]?.label ||
-                    priority
-                  }`}
-                  onDelete={() =>
-                    setPriority("")
-                  }
-                />
-              )}
-
-              {assignedTo && (
-                <Chip
-                  size="small"
-                  label={`Assigned: ${
-                    assignedToName ||
-                    "Selected user"
-                  }`}
-                  onDelete={
-                    handleClearAssignedTo
-                  }
-                />
-              )}
-
-              {hasFilters && (
-                <Button
-                  size="small"
-                  color="inherit"
-                  startIcon={
-                    <ClearIcon fontSize="small" />
-                  }
-                  onClick={
-                    handleClearFilters
-                  }
-                  sx={{
-                    ml: {
-                      xs: 0,
-                      sm: 0.5,
-                    },
-                  }}
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mr: 0.25 }}
                 >
-                  Clear filters
-                </Button>
-              )}
-            </Stack>
-          )}
+                  Filters:
+                </Typography>
+
+                {search && (
+                  <Chip
+                    size="small"
+                    label={`Search: ${search}`}
+                    onDelete={() =>
+                      setSearch("")
+                    }
+                  />
+                )}
+
+                {status && (
+                  <Chip
+                    size="small"
+                    label={`Status: ${STATUS_CONFIG[
+                        status
+                      ]?.label ||
+                      status
+                      }`}
+                    onDelete={() =>
+                      setStatus("")
+                    }
+                  />
+                )}
+
+                {priority && (
+                  <Chip
+                    size="small"
+                    label={`Priority: ${PRIORITY_CONFIG[
+                        priority
+                      ]?.label ||
+                      priority
+                      }`}
+                    onDelete={() =>
+                      setPriority("")
+                    }
+                  />
+                )}
+
+                {assignedTo && (
+                  <Chip
+                    size="small"
+                    label={`Assigned: ${assignedToName ||
+                      "Selected user"
+                      }`}
+                    onDelete={
+                      handleClearAssignedTo
+                    }
+                  />
+                )}
+
+                {hasFilters && (
+                  <Button
+                    size="small"
+                    color="inherit"
+                    startIcon={
+                      <ClearIcon fontSize="small" />
+                    }
+                    onClick={
+                      handleClearFilters
+                    }
+                    sx={{
+                      ml: {
+                        xs: 0,
+                        sm: 0.5,
+                      },
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </Stack>
+            )}
         </Box>
       </Card>
 
@@ -1180,10 +1171,10 @@ export default function LeadsListPage() {
               cursor: "pointer",
 
               "& .MuiDataGrid-columnHeaders":
-                {
-                  bgcolor:
-                    "background.default",
-                },
+              {
+                bgcolor:
+                  "background.default",
+              },
 
               "& .MuiDataGrid-cell": {
                 py: 1,
@@ -1195,9 +1186,9 @@ export default function LeadsListPage() {
               },
 
               "& .MuiDataGrid-columnHeaderTitle":
-                {
-                  fontWeight: 700,
-                },
+              {
+                fontWeight: 700,
+              },
             }}
           />
         </Card>

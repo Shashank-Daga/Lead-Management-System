@@ -85,6 +85,33 @@ async function validateUserHierarchy({
   }
 }
 
+/**
+ * Keeps the organisation from losing its last way in. Blocks:
+ *  - an actor deactivating or changing the role of their OWN account, and
+ *  - deactivating / demoting the last active Admin (whoever does it).
+ */
+async function assertAdminSafety({ userId, actorId, currentRoleKey, wasActive, nextRoleKey, willBeActive }) {
+  const isSelf = Boolean(actorId) && actorId === userId;
+
+  if (isSelf && willBeActive === false && wasActive) {
+    throw new ApiError(422, "You cannot deactivate your own account.");
+  }
+  if (isSelf && nextRoleKey !== currentRoleKey) {
+    throw new ApiError(422, "You cannot change your own role.");
+  }
+
+  const losingAdmin =
+    currentRoleKey === "ADMIN" && wasActive && (willBeActive === false || nextRoleKey !== "ADMIN");
+  if (losingAdmin) {
+    const otherActiveAdmins = await prisma.users.count({
+      where: { id: { not: userId }, isActive: true, role: { is: { key: "ADMIN" } } },
+    });
+    if (otherActiveAdmins === 0) {
+      throw new ApiError(422, "At least one active Admin account is required.");
+    }
+  }
+}
+
 async function listUsers() {
   return prisma.users.findMany({
     orderBy: { createdAt: "asc" },
@@ -170,6 +197,13 @@ async function createUser(input) {
     managerId: input.managerId,
   });
 
+  // Emails are unique ignoring case ("Foo@Bar.com" == "foo@bar.com").
+  const existing = await prisma.users.findFirst({
+    where: { email: { equals: input.email, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) throw new ApiError(409, "A user with this email already exists.");
+
   const passwordHash = await hashPassword(input.password);
 
   return prisma.$transaction(async (tx) => {
@@ -201,7 +235,7 @@ async function createUser(input) {
   });
 }
 
-async function updateUser(userId, input) {
+async function updateUser(userId, input, actorId = null) {
   const user = await prisma.users.findUnique({
     where: { id: userId },
   });
@@ -231,6 +265,15 @@ async function updateUser(userId, input) {
     roleId = role.id;
     nextRoleKey = input.roleKey;
   }
+
+  await assertAdminSafety({
+    userId,
+    actorId,
+    currentRoleKey: currentRoleKeyBefore,
+    wasActive: user.isActive,
+    nextRoleKey,
+    willBeActive: input.isActive === undefined ? user.isActive : input.isActive,
+  });
 
   const hierarchyChanging =
     input.managerId !== undefined ||
@@ -295,13 +338,24 @@ async function updateUser(userId, input) {
   });
 }
 
-async function deactivateUser(userId) {
+async function deactivateUser(userId, actorId = null) {
   const user = await prisma.users.findUnique({
     where: { id: userId },
     include: { role: { select: { key: true } } },
   });
 
   if (!user) throw new ApiError(404, "User not found.");
+
+  if (user.role.key === "ADMIN" || actorId) {
+    await assertAdminSafety({
+      userId,
+      actorId,
+      currentRoleKey: user.role.key,
+      wasActive: user.isActive,
+      nextRoleKey: user.role.key,
+      willBeActive: false,
+    });
+  }
 
   return prisma.$transaction(async (tx) => {
     if (user.role.key === "MANAGER") {

@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const ENV_KEYS = ["DATABASE_URL", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "NODE_ENV"];
+const ENV_KEYS = ["DATABASE_URL", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "NODE_ENV", "CORS_ORIGIN"];
 
 function withEnv(overrides, fn) {
   const saved = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
@@ -38,21 +38,29 @@ test("validateEnv: passes in development with any non-empty values", () => {
 
 test("validateEnv: production rejects short/placeholder secrets", () => {
   withEnv(
-    { NODE_ENV: "production", DATABASE_URL: "postgresql://x", JWT_ACCESS_SECRET: "changeme", JWT_REFRESH_SECRET: REAL_SECRET_B },
+    { NODE_ENV: "production", CORS_ORIGIN: "https://app.example.com", DATABASE_URL: "postgresql://x", JWT_ACCESS_SECRET: "changeme", JWT_REFRESH_SECRET: REAL_SECRET_B },
     (validateEnv) => assert.throws(() => validateEnv(), /JWT_ACCESS_SECRET/)
   );
 });
 
 test("validateEnv: production rejects identical access/refresh secrets", () => {
   withEnv(
-    { NODE_ENV: "production", DATABASE_URL: "postgresql://x", JWT_ACCESS_SECRET: REAL_SECRET_A, JWT_REFRESH_SECRET: REAL_SECRET_A },
+    { NODE_ENV: "production", CORS_ORIGIN: "https://app.example.com", DATABASE_URL: "postgresql://x", JWT_ACCESS_SECRET: REAL_SECRET_A, JWT_REFRESH_SECRET: REAL_SECRET_A },
     (validateEnv) => assert.throws(() => validateEnv(), /must be different/)
   );
 });
 
 test("validateEnv: production passes with two distinct, sufficiently long secrets", () => {
   withEnv(
-    { NODE_ENV: "production", DATABASE_URL: "postgresql://x", JWT_ACCESS_SECRET: REAL_SECRET_A, JWT_REFRESH_SECRET: REAL_SECRET_B },
+    { NODE_ENV: "production", CORS_ORIGIN: "https://app.example.com", DATABASE_URL: "postgresql://x", JWT_ACCESS_SECRET: REAL_SECRET_A, JWT_REFRESH_SECRET: REAL_SECRET_B },
     (validateEnv) => assert.doesNotThrow(() => validateEnv())
   );
+});
+
+test("validateEnv: production requires CORS_ORIGIN (otherwise any origin is accepted)", () => {
+  const base = { NODE_ENV: "production", DATABASE_URL: "postgresql://x", JWT_ACCESS_SECRET: REAL_SECRET_A, JWT_REFRESH_SECRET: REAL_SECRET_B };
+  withEnv(base, (validateEnv) => assert.throws(() => validateEnv(), /CORS_ORIGIN/));
+  withEnv({ ...base, CORS_ORIGIN: "   " }, (validateEnv) => assert.throws(() => validateEnv(), /CORS_ORIGIN/));
+  // development stays relaxed
+  withEnv({ ...base, NODE_ENV: "development" }, (validateEnv) => assert.doesNotThrow(() => validateEnv()));
 });

@@ -22,11 +22,13 @@ lead-management-system/
 │   │   ├── schema.prisma
 │   │   └── seed.js
 │   ├── src/
-│   │   ├── config/
+│   │   ├── config/        # permissions, status transitions, env validation
 │   │   ├── controllers/
-│   │   ├── middleware/
+│   │   ├── middleware/    # authenticate, authorize, error handler
 │   │   ├── routes/
-│   │   ├── services/
+│   │   ├── services/      # business rules and data-scope logic
+│   │   ├── utils/
+│   │   ├── validators/    # Zod request schemas
 │   │   ├── app.js
 │   │   └── server.js
 │   ├── tests/
@@ -34,13 +36,17 @@ lead-management-system/
 │   └── package.json
 ├── frontend/
 │   ├── src/
-│   │   ├── api/
-│   │   ├── components/
+│   │   ├── api/           # RTK Query endpoints, axios client
+│   │   ├── app/           # Redux store
+│   │   ├── components/    # layout, leads, notifications, shared UI
 │   │   ├── config/
-│   │   ├── features/
-│   │   ├── pages/
-│   │   ├── routes/
-│   │   └── theme/
+│   │   ├── features/      # auth state
+│   │   ├── hooks/         # usePermission
+│   │   ├── pages/         # auth, dashboard, leads, users, directory, profile
+│   │   ├── routes/        # ProtectedRoute, RequirePermission
+│   │   ├── theme/
+│   │   ├── utils/         # CSV helpers
+│   │   └── App.jsx
 │   ├── .env.example
 │   └── package.json
 ├── docker-compose.yml
@@ -231,7 +237,7 @@ Set the following values in the backend hosting provider's environment settings:
 * `JWT_ACCESS_EXPIRES_IN`
 * `JWT_REFRESH_EXPIRES_IN`
 * `PORT`, if required by the hosting platform
-* `CORS_ORIGIN`
+* `CORS_ORIGIN` (**required** in production: the frontend's URL, e.g. `https://your-app.vercel.app`; separate several origins with commas)
 * `NODE_ENV=production`
 
 Generate strong, independent JWT secrets for production. Do not reuse secrets from local development.
@@ -270,7 +276,7 @@ npm start
 
 Make sure the hosting environment supports the Node.js version, Prisma client, and database connectivity required by the application.
 
-Configure `CORS_ORIGIN` to match the actual frontend origin. The backend's CORS configuration must allow only the intended origins.
+Configure `CORS_ORIGIN` to match the actual frontend origin. The backend's CORS configuration must allow only the intended origins. `CORS_ORIGIN` is required when `NODE_ENV=production` (the server refuses to start without it); to allow several origins, separate them with commas.
 
 ### Step 5: Configure and Build the Frontend
 
@@ -393,6 +399,12 @@ The existing test suite covers areas including:
 | `httpUserHierarchy.test.js`                   | Manager/Executive hierarchy rules, assignment notifications, manager deactivation behavior, and user access restrictions                                                      |
 | `httpScopeViews.test.js`                      | Role-scoped dashboards, CSV export scope, and notification privacy                                                                                                            |
 | `serviceFixes.test.js` and smaller test files | Service-level behavior and regression coverage                                                                                                                                |
+| `profile.http.test.js`, `profile.schema.test.js`, `profile.service.test.js` | Profile API: own details (phone, date of birth), password change and token invalidation, scoped read-only directory, validation rules |
+| `followUpVisibility.test.js`, `followUpSecurity.test.js` | Follow-up visibility by the lead's current assignee and the manager hierarchy; follow-up permission checks |
+| `leadLostAssignment.test.js`                  | Lost and converted leads cannot be assigned or reassigned until reopened |
+| `leadHardening.test.js`                       | Manager scope for leads they created, dashboard follow-ups ignoring closed leads, reopening behavior, same-assignee refusal |
+| `securityHardening.test.js`                   | Proxy-aware login rate limiting, admin lock-out protection, case-insensitive emails, CSV formula neutralization |
+| `validateEnv.test.js`                         | Startup environment validation, including required production settings (secrets, `CORS_ORIGIN`) |
 | `securityIntegration.test.js`                 | Additional security integration checks that require a generated Prisma client and a live PostgreSQL database                                                                  |
 
 Consult the individual test files for their exact coverage and setup requirements.
@@ -445,6 +457,9 @@ Important areas to verify include:
 * Lead details and editing
 * Follow-ups, notes, and activity history
 * User management
+* My Profile (phone, date of birth, password change)
+* User Directory (search by name and by mobile number, CSV export)
+* Assigning and reassigning a lead (search, `(M)` / `(E)` tags, disabled for lost and converted leads)
 * Notifications
 * Navigation, dialogs, loading states, and error states
 
@@ -487,6 +502,9 @@ Automated browser-level end-to-end tests are not yet implemented.
 * Search, filtering, sorting, and pagination
 * CSV export with error handling
 * Lead details and associated activity views
+* Assignment picker with name search and `(M)` / `(E)` role tags, limited to the users the signed-in user may assign to
+* Business rules: lost and converted leads cannot be assigned or reassigned (reopen via a status change first); a lead cannot be reassigned to its current assignee; the loss reason is kept when a lead is reopened, while the conversion date is cleared
+* Managers can edit, reassign and follow up only on leads currently assigned to them or their team (or unassigned leads they created); leads they created that moved to another team remain view-only
 
 ### Follow-ups, Notes, and History
 
@@ -495,6 +513,7 @@ Automated browser-level end-to-end tests are not yet implemented.
 * Lead notes with edit and delete operations
 * Activity and audit history
 * Assignment and status-related history
+* Follow-ups are visible according to the lead's current assignee and the manager hierarchy
 
 ### Dashboard and Reporting
 
@@ -502,6 +521,7 @@ Automated browser-level end-to-end tests are not yet implemented.
 * Open, new, resolved, and overdue lead metrics
 * Dashboard charts and activity summaries
 * Data scoped according to the user's authorization
+* Pending follow-ups of lost or converted leads are left out of the overdue, upcoming and due-today widgets
 
 ### User Management
 
@@ -510,6 +530,15 @@ Automated browser-level end-to-end tests are not yet implemented.
 * Executive-to-Manager assignment
 * User editing and manager selection
 * Manager deactivation handling and associated business rules
+* Admin lock-out protection: users cannot deactivate or change the role of their own account, and the last active Admin cannot be deactivated or demoted
+* Emails are trimmed and lowercased; duplicates that differ only by case are rejected, and sign-in ignores case
+
+### Profile and User Directory
+
+* "My Profile" page: name, work email and role are read-only (managed by an Admin); users edit their own phone number (exactly 10 digits) and date of birth
+* Password change from the profile page; changing the password signs out all other sessions (older access and refresh tokens stop working)
+* "User Directory" page in the main navigation: Admins see all users, Managers see their own team, Executives do not see it
+* Directory search by name and, separately, by mobile number, plus CSV export of the filtered list
 
 ### Notifications
 
@@ -528,6 +557,12 @@ Automated browser-level end-to-end tests are not yet implemented.
 * Login UI improvements
 * Accessibility and responsive QA improvements
 * Route-level lazy loading to split page code into separate JavaScript chunks
+
+### Security Hardening
+
+* The API trusts one reverse-proxy hop (`trust proxy`), so login rate limiting counts each client separately behind Render
+* `CORS_ORIGIN` is required in production
+* CSV exports (leads and directory) neutralize values that spreadsheet applications would run as formulas
 
 ---
 
@@ -564,7 +599,12 @@ JWT_REFRESH_EXPIRES_IN="7d"
 
 Account deactivation checks can prevent refresh attempts once the backend detects that the user is inactive. They do not provide a general token-revocation mechanism.
 
-Password-reset or logout-everywhere functionality, if introduced, must not be assumed to invalidate previously issued refresh tokens unless explicit revocation support is implemented.
+Changing a password does invalidate every access and refresh token issued before the change (the user's `passwordChangedAt` timestamp is compared with each token's issue time). Logging out only clears the tokens in the browser; it does not revoke the refresh token on the server. A password-reset or logout-everywhere feature, if introduced, must not be assumed to revoke previously issued refresh tokens unless explicit revocation support is implemented.
+
+### Other Known Limitations
+
+* Deactivating a user does not reassign or release that user's leads; they stay assigned to the deactivated account until an Admin reassigns them.
+* Emails are matched case-insensitively in the application, but the database unique index on `email` is still case-sensitive.
 
 ### Recommended Improvement
 
@@ -581,7 +621,8 @@ Before a public or business-critical deployment:
 * Use HTTPS for all application traffic.
 * Use strong, unique production secrets.
 * Keep `.env` files and credentials out of Git.
-* Configure CORS for the intended frontend origins only.
+* Configure CORS for the intended frontend origins only (`CORS_ORIGIN` is required in production).
+* The API assumes exactly one reverse proxy in front of it (`trust proxy` is set to `1` in `backend/src/app.js`). Adjust that value if your hosting topology has more or fewer proxy hops.
 * Use least-privilege database credentials.
 * Apply database migrations through the deployment process.
 * Review authentication rate limits and monitoring requirements.
@@ -639,7 +680,7 @@ Before submitting or deploying the project, verify the following.
 * [ ] `.env.example` files contain only safe placeholders and documented defaults.
 * [ ] Production JWT secrets are strong and distinct.
 * [ ] Production `DATABASE_URL` points to the intended database.
-* [ ] `CORS_ORIGIN` matches the deployed frontend origin.
+* [ ] `CORS_ORIGIN` is set and matches the deployed frontend origin (the server will not start in production without it).
 * [ ] The frontend API base URL is correct for the deployment topology.
 * [ ] Demo credentials are not used for real accounts.
 * [ ] Known refresh-token limitations are documented.

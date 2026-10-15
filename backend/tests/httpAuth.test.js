@@ -37,6 +37,9 @@ async function buildApp() {
     users: {
       findUnique: async ({ where }) =>
         where.id ? users[where.id] || null : Object.values(users).find((u) => u.email === where.email) || null,
+      // Login looks the email up case-insensitively.
+      findFirst: async ({ where }) =>
+        Object.values(users).find((u) => u.email.toLowerCase() === String(where.email.equals).toLowerCase()) || null,
     },
     lead: { count: async () => 0, findMany: async () => [] },
   });
@@ -167,4 +170,3 @@ test("unknown route -> 404 JSON", async () => {
   const res = await request(app).get("/api/nope");
   assert.equal(res.status, 404);
 });
-

@@ -1,7 +1,11 @@
 const { z } = require("zod");
 
+// Emails are matched case-insensitively: trim and lowercase before they are
+// stored or looked up, so "Foo@Bar.com" and "foo@bar.com" are the same account.
+const emailSchema = z.string().trim().toLowerCase().email();
+
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(1, "Password is required"),
 });
 
@@ -11,7 +15,7 @@ const refreshSchema = z.object({
 
 const createUserSchema = z.object({
   fullName: z.string().min(1).max(150),
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(8, "Password must be at least 8 characters"),
   roleKey: z.enum(["ADMIN", "MANAGER", "EXECUTIVE"]),
   managerId: z.string().uuid().optional(),

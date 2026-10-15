@@ -104,6 +104,7 @@ model Lead {
 
   @@index([currentAssigneeId])
   @@index([isDeleted])
+  @@index([status])
   @@map("leads")
 }
 
@@ -178,7 +179,9 @@ model LeadSequence {
 }
 
 model notification {
-  id        String   @id @default(uuid())
+  // The database generates this id (see the notification migrations), so the schema declares the same default instead of 
+  // Prisma's client-side uuid().
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
   userId    String
   type      String
   title     String

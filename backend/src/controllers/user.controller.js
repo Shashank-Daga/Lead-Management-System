@@ -23,12 +23,12 @@ const create = asyncHandler(async (req, res) => {
 
 const update = asyncHandler(async (req, res) => {
   const input = updateUserSchema.parse(req.body);
-  const user = await userService.updateUser(req.params.userId, input);
+  const user = await userService.updateUser(req.params.userId, input, req.user.id);
   res.json(user);
 });
 
 const deactivate = asyncHandler(async (req, res) => {
-  const user = await userService.deactivateUser(req.params.userId);
+  const user = await userService.deactivateUser(req.params.userId, req.user.id);
   res.json(user);
 });
 

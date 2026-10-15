@@ -9,8 +9,9 @@ const {
 } = require("../utils/auth");
 
 async function login(email, password) {
-  const user = await prisma.users.findUnique({
-    where: { email },
+  // Case-insensitive, so accounts created before emails were normalised (which may contain capital letters) can still sign in.
+  const user = await prisma.users.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
     include: { role: { include: { permissions: { include: { permission: true } } } } },
   });
 
