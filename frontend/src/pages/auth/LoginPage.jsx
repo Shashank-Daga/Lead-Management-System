@@ -23,7 +23,7 @@ import {
   VisibilityOffOutlined,
   VisibilityOutlined,
 } from "@mui/icons-material";
-import { useLoginMutation } from "../../api/apiSlice";
+import { apiSlice, useLoginMutation } from "../../api/apiSlice";
 import { credentialsReceived } from "../../features/auth/authSlice";
 
 const schema = z.object({
@@ -64,6 +64,7 @@ export default function LoginPage() {
     try {
       const result = await login(values).unwrap();
 
+      dispatch(apiSlice.util.resetApiState());
       dispatch(credentialsReceived(result));
       navigate("/dashboard", { replace: true });
     } catch (err) {

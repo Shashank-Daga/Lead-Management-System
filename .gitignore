@@ -27,3 +27,6 @@ Thumbs.db
 **/__tests__/
 **/*.test.*
 **/*.spec.*
+
+# Seed files
+**/seed.js

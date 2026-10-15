@@ -33,6 +33,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeftOutlined";
 
 import NotificationBell from "./NotificationBell";
 import { loggedOut, selectCurrentUser } from "../../features/auth/authSlice";
+import { apiSlice } from "../../api/apiSlice";
 import usePermission from "../../hooks/usePermission";
 import { PERMISSIONS } from "../../config/permissions";
 
@@ -140,6 +141,7 @@ export default function AppLayout() {
   const handleLogout = () => {
     setMenuAnchor(null);
     dispatch(loggedOut());
+    dispatch(apiSlice.util.resetApiState());
     navigate("/login");
   };
 
