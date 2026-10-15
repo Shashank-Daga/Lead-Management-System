@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useMemo, useState } from "react";
@@ -7,6 +8,7 @@ import {
   AppBar,
   Avatar,
   Box,
+  CircularProgress,
   Divider,
   Drawer,
   IconButton,
@@ -593,7 +595,15 @@ export default function AppLayout() {
           overflowX: "hidden",
         }}
       >
-        <Outlet />
+        <Suspense
+          fallback={
+            <Box sx={{ minHeight: "50vh", display: "grid", placeItems: "center" }}>
+              <CircularProgress size={30} />
+            </Box>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </Box>
     </Box>
   );

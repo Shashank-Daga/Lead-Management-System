@@ -48,6 +48,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
@@ -66,6 +67,7 @@ export default function LoginPage() {
       dispatch(credentialsReceived(result));
       navigate("/dashboard", { replace: true });
     } catch (err) {
+      reset({ email: "", password: "" });
       setServerError(
         err?.data?.message ||
           "Unable to sign in. Please check your credentials and try again."

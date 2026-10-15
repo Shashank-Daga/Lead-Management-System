@@ -16,7 +16,7 @@ axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status !== 401 || original._retried || original.url?.includes("/auth/refresh")) {
+    if (error.response?.status !== 401 || original._retried || original.url?.includes("/auth/refresh") || original.url?.includes("/auth/login")) {
       return Promise.reject(error);
     }
     original._retried = true;

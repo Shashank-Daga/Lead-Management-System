@@ -10,9 +10,13 @@ import {
   Chip,
   CircularProgress,
   Stack,
+  IconButton,
+  InputAdornment,
   TextField,
   Typography,
 } from "@mui/material";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import LockResetOutlinedIcon from "@mui/icons-material/LockResetOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
@@ -24,6 +28,31 @@ import {
   useChangePasswordMutation,
 } from "../../api/apiSlice";
 import { credentialsReceived } from "../../features/auth/authSlice";
+
+function PasswordField(props) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <TextField
+      {...props}
+      type={visible ? "text" : "password"}
+      InputProps={{
+        endAdornment: (
+          <InputAdornment position="end">
+            <IconButton
+              type="button"
+              edge="end"
+              aria-label={visible ? "Hide password" : "Show password"}
+              onClick={() => setVisible((v) => !v)}
+              onMouseDown={(event) => event.preventDefault()}
+            >
+              {visible ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
+}
 
 function SectionCard({ icon, title, description, children }) {
   return (
@@ -349,7 +378,13 @@ export default function ProfilePage() {
         <SectionCard
           icon={<PersonOutlineOutlinedIcon />}
           title="Personal information"
-          description="Your name, work email and role are managed by your administrator. You can update your contact details."
+          description={
+            <>
+              Your name, work email and role are managed by your administrator.
+              <br />
+              You can update your contact details.
+            </>
+          }
         >
           <Stack
             component="form"
@@ -436,9 +471,8 @@ export default function ProfilePage() {
             spacing={2.2}
             onSubmit={handlePasswordSubmit}
           >
-            <TextField
+            <PasswordField
               label="Current password"
-              type="password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
               autoComplete="current-password"
@@ -446,9 +480,8 @@ export default function ProfilePage() {
               fullWidth
             />
 
-            <TextField
+            <PasswordField
               label="New password"
-              type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               autoComplete="new-password"
@@ -458,9 +491,8 @@ export default function ProfilePage() {
               fullWidth
             />
 
-            <TextField
+            <PasswordField
               label="Confirm new password"
-              type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               autoComplete="new-password"
