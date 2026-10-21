@@ -716,7 +716,7 @@ function UserCard({
               sx={{
                 width: 40,
                 height: 40,
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 fontWeight: 700,
                 bgcolor: "primary.main",
               }}
@@ -1075,7 +1075,7 @@ export default function UsersPage() {
                     <PeopleOutlineRoundedIcon
                       color="disabled"
                       sx={{
-                        fontSize: 36,
+                        fontSize: "2.25rem",
                         mb: 1,
                       }}
                     />
@@ -1159,7 +1159,7 @@ export default function UsersPage() {
                               sx={{
                                 width: 34,
                                 height: 34,
-                                fontSize: 12,
+                                fontSize: "0.75rem",
                                 fontWeight: 700,
                                 bgcolor:
                                   "primary.main",

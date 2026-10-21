@@ -179,7 +179,7 @@ function LeadMobileCard({ lead, onClick }) {
             >
               <PersonOutlineIcon
                 sx={{
-                  fontSize: 18,
+                  fontSize: "1.125rem",
                   color: "text.secondary",
                 }}
               />
@@ -202,7 +202,7 @@ function LeadMobileCard({ lead, onClick }) {
             >
               <PhoneOutlinedIcon
                 sx={{
-                  fontSize: 18,
+                  fontSize: "1.125rem",
                   color: "text.secondary",
                 }}
               />
@@ -225,7 +225,7 @@ function LeadMobileCard({ lead, onClick }) {
             >
               <EmailOutlinedIcon
                 sx={{
-                  fontSize: 18,
+                  fontSize: "1.125rem",
                   color: "text.secondary",
                 }}
               />
@@ -251,7 +251,7 @@ function LeadMobileCard({ lead, onClick }) {
           >
             <PersonOutlineIcon
               sx={{
-                fontSize: 18,
+                fontSize: "1.125rem",
                 color: "text.secondary",
               }}
             />
@@ -272,7 +272,7 @@ function LeadMobileCard({ lead, onClick }) {
           >
             <EventOutlinedIcon
               sx={{
-                fontSize: 18,
+                fontSize: "1.125rem",
                 color: "text.secondary",
               }}
             />

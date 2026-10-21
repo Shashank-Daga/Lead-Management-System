@@ -140,7 +140,7 @@ function NotificationItem({
             </Typography>
 
             <ArrowForwardRoundedIcon
-              sx={{ fontSize: 14 }}
+              sx={{ fontSize: "0.875rem" }}
             />
           </Stack>
         )}
@@ -401,7 +401,7 @@ export default function NotificationBell() {
             <NotificationsNoneRoundedIcon
               color="disabled"
               sx={{
-                fontSize: 30,
+                fontSize: "1.875rem",
                 mb: 1,
               }}
             />
@@ -460,7 +460,7 @@ export default function NotificationBell() {
               <NotificationsNoneRoundedIcon
                 color="disabled"
                 sx={{
-                  fontSize: 36,
+                  fontSize: "2.25rem",
                   mb: 1,
                 }}
               />

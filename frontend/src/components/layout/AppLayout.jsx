@@ -420,7 +420,7 @@ export default function AppLayout() {
                 width: 36,
                 height: 36,
                 bgcolor: "primary.main",
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 fontWeight: 700,
               }}
             >
@@ -529,7 +529,7 @@ export default function AppLayout() {
               width: MOBILE_DRAWER_WIDTH,
               boxSizing: "border-box",
               bgcolor: "primary.dark",
-              color: "#EEF0FF",
+              color: "primary.50",
               border: "none",
             },
           }}
@@ -551,7 +551,7 @@ export default function AppLayout() {
               boxSizing: "border-box",
 
               bgcolor: "primary.dark",
-              color: "#EEF0FF",
+              color: "primary.50",
 
               border: "none",
               overflowX: "hidden",

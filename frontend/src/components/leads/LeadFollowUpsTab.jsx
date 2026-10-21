@@ -819,7 +819,7 @@ export default function LeadFollowUpsTab({
           >
             <EventOutlinedIcon
               color="disabled"
-              sx={{ fontSize: 34, mb: 1 }}
+              sx={{ fontSize: "2.125rem", mb: 1 }}
             />
 
             <Typography

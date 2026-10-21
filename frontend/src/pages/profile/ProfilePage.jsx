@@ -290,7 +290,7 @@ export default function ProfilePage() {
           borderRadius: 3,
           color: "common.white",
           background:
-            "linear-gradient(120deg, #172554 0%, #1d4ed8 100%)",
+            "linear-gradient(120deg, #1E1B4B 0%, #3730A3 100%)",
         }}
       >
         <CardContent
@@ -311,7 +311,7 @@ export default function ProfilePage() {
                 width: 76,
                 height: 76,
                 bgcolor: "rgba(255,255,255,0.18)",
-                fontSize: 26,
+                fontSize: "1.625rem",
                 fontWeight: 750,
               }}
             >

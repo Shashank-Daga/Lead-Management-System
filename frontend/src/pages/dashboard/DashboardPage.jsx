@@ -36,6 +36,7 @@ import {
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 
+import theme from "../../theme/theme";
 import { useGetDashboardQuery } from "../../api/apiSlice";
 import {
   STATUS_CONFIG,
@@ -343,7 +344,7 @@ function LeadListCard({
             <Box>
               <CheckCircleOutline
                 sx={{
-                  fontSize: 36,
+                  fontSize: "2.25rem",
                   color: "success.main",
                   opacity: 0.7,
                   mb: 1,
@@ -420,7 +421,7 @@ function LeadListCard({
                   sx={{
                     ml: 1,
                     flexShrink: 0,
-                    fontSize: 18,
+                    fontSize: "1.125rem",
                     color: "text.disabled",
                   }}
                 />
@@ -574,7 +575,7 @@ export default function DashboardPage() {
       count: item.count,
       color:
         STATUS_CONFIG[item.status]?.color ||
-        "#5A5F73",
+        theme.palette.text.secondary,
     })
   );
 
@@ -586,7 +587,7 @@ export default function DashboardPage() {
       count: item.count,
       color:
         PRIORITY_CONFIG[item.priority]?.color ||
-        "#5A5F73",
+        theme.palette.text.secondary,
     }));
 
   const isOwn = data.scope === "own";
@@ -840,7 +841,7 @@ export default function DashboardPage() {
                     tickLine={false}
                     axisLine={false}
                     tick={{
-                      fontSize: 12,
+                      fontSize: "0.75rem",
                     }}
                   />
 
@@ -850,7 +851,7 @@ export default function DashboardPage() {
                     }}
                     contentStyle={{
                       borderRadius: 10,
-                      border: "1px solid #E4E7EF",
+                      border: `1px solid ${theme.palette.divider}`,
                       boxShadow:
                         "0 6px 20px rgba(15, 23, 42, 0.08)",
                     }}
@@ -920,7 +921,7 @@ export default function DashboardPage() {
                     tickLine={false}
                     axisLine={false}
                     tick={{
-                      fontSize: 12,
+                      fontSize: "0.75rem",
                     }}
                   />
 
@@ -937,7 +938,7 @@ export default function DashboardPage() {
                     }}
                     contentStyle={{
                       borderRadius: 10,
-                      border: "1px solid #E4E7EF",
+                      border: `1px solid ${theme.palette.divider}`,
                       boxShadow:
                         "0 6px 20px rgba(15, 23, 42, 0.08)",
                     }}

@@ -1,8 +1,9 @@
 import { Chip } from "@mui/material";
+import theme from "../../theme/theme";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "../../theme/leadDisplay";
 
 export function StatusChip({ status, size = "small" }) {
-  const config = STATUS_CONFIG[status] || { label: status, color: "#5A5F73" };
+  const config = STATUS_CONFIG[status] || { label: status, color: theme.palette.text.secondary };
   return (
     <Chip
       size={size}
@@ -17,7 +18,7 @@ export function StatusChip({ status, size = "small" }) {
 }
 
 export function PriorityChip({ priority, size = "small" }) {
-  const config = PRIORITY_CONFIG[priority] || { label: priority, color: "#5A5F73" };
+  const config = PRIORITY_CONFIG[priority] || { label: priority, color: theme.palette.text.secondary };
   return (
     <Chip
       size={size}

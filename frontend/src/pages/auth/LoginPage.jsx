@@ -146,7 +146,7 @@ export default function LoginPage() {
                   border: "1px solid rgba(255,255,255,0.18)",
                 }}
               >
-                <Typography fontWeight={800} fontSize={20}>
+                <Typography fontWeight={800} fontSize="1.25rem">
                   L
                 </Typography>
               </Box>
@@ -180,7 +180,7 @@ export default function LoginPage() {
                 maxWidth: 440,
                 color: "rgba(255,255,255,0.72)",
                 lineHeight: 1.7,
-                fontSize: 16,
+                fontSize: "1rem",
               }}
             >
               A centralized workspace for managing leads, follow-ups,
@@ -198,7 +198,7 @@ export default function LoginPage() {
               >
                 <CheckCircleOutlineRounded
                   sx={{
-                    fontSize: 20,
+                    fontSize: "1.25rem",
                     color: "rgba(255,255,255,0.9)",
                   }}
                 />
@@ -266,7 +266,7 @@ export default function LoginPage() {
                   color: "primary.contrastText",
                 }}
               >
-                <Typography fontWeight={800} fontSize={18}>
+                <Typography fontWeight={800} fontSize="1.125rem">
                   L
                 </Typography>
               </Box>
@@ -296,7 +296,7 @@ export default function LoginPage() {
             <Typography
               variant="body2"
               color="text.secondary"
-              sx={{ fontSize: 15 }}
+              sx={{ fontSize: "0.9375rem" }}
             >
               Sign in to continue to your lead management workspace.
             </Typography>
@@ -387,7 +387,7 @@ export default function LoginPage() {
                 sx={{
                   mt: 0.5,
                   minHeight: 50,
-                  fontSize: 15,
+                  fontSize: "0.9375rem",
                   fontWeight: 700,
                   borderRadius: 1.5,
                   boxShadow: "none",
