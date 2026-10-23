@@ -1,170 +1,250 @@
-# Lead Management System
+**\# Lead Management System**
 
 A CRM-style Lead Management System for managing leads, assignments, follow-ups, notes, activity history, users, and notifications.
 
-**Frontend:** React, Vite, Material UI (MUI), Redux Toolkit, RTK Query, React Router, React Hook Form, Zod, and Recharts
-**Backend:** Node.js, Express.js, Prisma ORM, and PostgreSQL
-**Authentication:** JWT access and refresh tokens
-**Authorization:** Permission-driven Role-Based Access Control (RBAC)
-**Roles:** Admin, Manager, and Executive
+**\*\*Frontend:\*\*** React, Vite, Material UI (MUI), Redux Toolkit, RTK Query, React Router, React Hook Form, Zod, and Recharts
+
+**\*\*Backend:\*\*** Node.js, Express.js, Prisma ORM, and PostgreSQL
+
+**\*\*Authentication:\*\*** JWT access and refresh tokens
+
+**\*\*Authorization:\*\*** Permission-driven Role-Based Access Control (RBAC)
+
+**\*\*Roles:\*\*** Admin, Manager, and Executive
 
 The application includes a responsive interface for desktop, tablet, and mobile devices, role-scoped dashboards, lead management workflows, and an in-app notification center.
 
----
+**---**
 
-## Project Structure
+**\## Project Structure**
 
-```text
+\`\`\`text
+
 lead-management-system/
+
 ├── backend/
-│   ├── prisma/
-│   │   ├── migrations/
-│   │   ├── schema.prisma
-│   │   └── seed.js
-│   ├── src/
-│   │   ├── config/        # permissions, status transitions, env validation
-│   │   ├── controllers/
-│   │   ├── middleware/    # authenticate, authorize, error handler
-│   │   ├── routes/
-│   │   ├── services/      # business rules and data-scope logic
-│   │   ├── utils/
-│   │   ├── validators/    # Zod request schemas
-│   │   ├── app.js
-│   │   └── server.js
-│   ├── tests/
-│   ├── .env.example
-│   └── package.json
+
+│   ├── prisma/
+
+│   │   ├── migrations/
+
+│   │   ├── schema.prisma
+
+│   │   └── seed.js
+
+│   ├── src/
+
+│   │   ├── config/        # permissions, status transitions, env
+validation
+
+│   │   ├── controllers/
+
+│   │   ├── middleware/    # authenticate, authorize, error handler
+
+│   │   ├── routes/
+
+│   │   ├── services/      # business rules and data-scope logic
+
+│   │   ├── utils/
+
+│   │   ├── validators/    # Zod request schemas
+
+│   │   ├── app.js
+
+│   │   └── server.js
+
+│   ├── tests/
+
+│   ├── .env.example
+
+│   └── package.json
+
 ├── frontend/
-│   ├── src/
-│   │   ├── api/           # RTK Query endpoints, axios client
-│   │   ├── app/           # Redux store
-│   │   ├── components/    # layout, leads, notifications, shared UI
-│   │   ├── config/
-│   │   ├── features/      # auth state
-│   │   ├── hooks/         # usePermission
-│   │   ├── pages/         # auth, dashboard, leads, users, directory, profile
-│   │   ├── routes/        # ProtectedRoute, RequirePermission
-│   │   ├── theme/
-│   │   ├── utils/         # CSV helpers
-│   │   └── App.jsx
-│   ├── .env.example
-│   └── package.json
+
+│   ├── src/
+
+│   │   ├── api/           \# RTK Query endpoints, axios client
+
+│   │   ├── app/           \# Redux store
+
+│   │   ├── components/    # layout, leads, notifications, shared UI
+
+│   │   ├── config/
+
+│   │   ├── features/      # auth state
+
+│   │   ├── hooks/         \# usePermission
+
+│   │   ├── pages/         \# auth, dashboard, leads, users, directory,
+profile
+
+│   │   ├── routes/        # ProtectedRoute, RequirePermission
+
+│   │   ├── theme/
+
+│   │   ├── utils/         \# CSV helpers
+
+│   │   └── App.jsx
+
+│   ├── .env.example
+
+│   └── package.json
+
 ├── docker-compose.yml
+
 ├── .gitignore
+
 └── README.md
-```
+
+\`\`\`
 
 The structure above summarizes the principal project directories; individual files may vary as the project evolves.
 
----
+**---**
 
-## 1. Local Setup
+**\## 1. Local Setup**
 
-### Prerequisites
+**\### Prerequisites**
 
-* Node.js 18 or later
-* npm
-* Docker and Docker Compose for the provided local PostgreSQL setup, or access to an existing PostgreSQL instance
-* Git, if cloning the repository
+\* Node.js 18 or later
 
-### Clone the Repository
+\* npm
 
-```bash
+\* Docker and Docker Compose for the provided local PostgreSQL setup, or access to an existing PostgreSQL instance
+
+\* Git, if cloning the repository
+
+**\### Clone the Repository**
+
+\`\`\`bash
+
 git clone https://github.com/Shashank-Daga/Lead-Management-System.git
+
 cd Lead-Management-System
-```
+
+\`\`\`
 
 If you have already cloned the repository, navigate to its root directory instead.
 
-### Start PostgreSQL
+**\### Start PostgreSQL**
 
 From the project root:
 
-```bash
-docker compose up -d
-```
+\`\`\`bash
 
-This starts the PostgreSQL service configured in `docker-compose.yml`. Check that the service is running before proceeding.
+docker compose up -d
+
+\`\`\`
+
+This starts the PostgreSQL service configured in \`docker-compose.yml\`.
+Check that the service is running before proceeding.
 
 If you use an existing PostgreSQL instance, make sure the database and credentials match your backend configuration.
 
-### Configure the Backend
+**\### Configure the Backend**
 
 Navigate to the backend directory:
 
-```bash
+\`\`\`bash
+
 cd backend
-```
+
+\`\`\`
 
 Create your local environment file:
 
-```bash
+\`\`\`bash
+
 cp .env.example .env
-```
+
+\`\`\`
 
 On Windows PowerShell, you can alternatively run:
 
-```powershell
+\`\`\`powershell
+
 Copy-Item .env.example .env
-```
 
-Configure the values in `backend/.env`:
+\`\`\`
 
-```env
+Configure the values in \`backend/.env\`:
+
+\`\`\`env
+
 DATABASE_URL="postgresql://lms_user:lms_password@localhost:5432/lms_db?schema=public"
 
 JWT_ACCESS_SECRET="REPLACE_WITH_A_STRONG_RANDOM_SECRET"
+
 JWT_REFRESH_SECRET="REPLACE_WITH_A_DIFFERENT_STRONG_RANDOM_SECRET"
 
 JWT_ACCESS_EXPIRES_IN="15m"
+
 JWT_REFRESH_EXPIRES_IN="7d"
 
 PORT=4000
+
 CORS_ORIGIN="http://localhost:5173"
+
 NODE_ENV="development"
-```
+
+\`\`\`
 
 The database connection string above is an example. Use the credentials and database name defined by your actual PostgreSQL setup.
 
 Generate strong, independent JWT secrets using Node.js:
 
-```bash
+\`\`\`bash
+
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
+
+\`\`\`
 
 Run the command twice to generate separate values for the access and refresh secrets.
 
 Install dependencies and prepare the database:
 
-```bash
-npm install
-npx prisma generate
-npx prisma migrate dev --name init
-npm run seed
-npm run dev
-```
+\`\`\`bash
 
-If migrations have already been created and committed, use the existing migrations rather than creating an unnecessary new initial migration. For a fresh database, `npx prisma migrate dev` applies the pending development migrations.
+npm install
+
+npx prisma generate
+
+npx prisma migrate dev --name init
+
+npm run seed
+
+npm run dev
+
+\`\`\`
+
+If migrations have already been created and committed, use the existing migrations rather than creating an unnecessary new initial migration.
+For a fresh database, \`npx prisma migrate dev\` applies the pending development migrations.
 
 The backend API runs at:
 
-```text
+\`\`\`text
+
 http://localhost:4000
-```
 
-The backend provides a health endpoint at `/health`.
+\`\`\`
 
-### Demo Accounts
+The backend provides a health endpoint at \`/health\`.
+
+**\### Demo Accounts**
 
 After running the seed script, the following demo accounts are available:
 
-| Email                | Role      |
-| -------------------- | --------- |
-| `admin@demo.com`     | Admin     |
-| `manager@demo.com`   | Manager   |
-| `executive@demo.com` | Executive |
+\| Email                \| Role      \|
 
-**Demo password:** `ChangeMe123!`
+\| -------------------- \| --------- \|
+
+\| \`admin@demo.com\`     \| Admin     \|
+
+\| \`manager@demo.com\`   \| Manager   \|
+
+\| \`executive@demo.com\` \| Executive \|
+
+**\*\*Demo password:\*\*** \`ChangeMe123!\`
 
 The Executive account reports to the seeded Manager account.
 
@@ -172,202 +252,254 @@ These are development/demo credentials only. Never use the default demo password
 
 The seed script initializes permissions, roles, and three demo users.
 
-### Configure the Frontend
+**\### Configure the Frontend**
 
 Open a separate terminal and navigate to the frontend directory:
 
-```bash
+\`\`\`bash
+
 cd frontend
-```
+
+\`\`\`
 
 Create the local environment file:
 
-```bash
+\`\`\`bash
+
 cp .env.example .env
-```
+
+\`\`\`
 
 On Windows PowerShell:
 
-```powershell
+\`\`\`powershell
+
 Copy-Item .env.example .env
-```
+
+\`\`\`
 
 The default frontend environment configuration is:
 
-```env
+\`\`\`env
+
 VITE_API_BASE_URL="/api"
-```
+
+\`\`\`
 
 Install dependencies and start the development server:
 
-```bash
+\`\`\`bash
+
 npm install
+
 npm run dev
-```
+
+\`\`\`
 
 The frontend is available at:
 
-```text
-http://localhost:5173
-```
+\`\`\`text
 
-The Vite development server proxies `/api` requests to the backend at `http://localhost:4000`, as configured in `vite.config.js`.
+http://localhost:5173
+
+\`\`\`
+
+The Vite development server proxies \`/api\` requests to the backend at \`http://localhost:4000\`, as configured in \`vite.config.js\`.
 
 This proxy configuration allows local development without requiring a separate cross-origin browser request.
 
----
+**---**
 
-## 2. Production Deployment
+**\## 2. Production Deployment**
 
 The application can be deployed using a managed PostgreSQL database, a Node.js hosting platform for the backend, and a static hosting platform for the frontend.
 
-### Step 1: Provision PostgreSQL
+**\### Step 1: Provision PostgreSQL**
 
 Provision a PostgreSQL database using a managed provider or your own infrastructure.
 
-Obtain the connection string and configure it as `DATABASE_URL` in the backend deployment environment.
+Obtain the connection string and configure it as \`DATABASE_URL\` in the backend deployment environment.
 
-### Step 2: Configure Backend Environment Variables
+**\### Step 2: Configure Backend Environment Variables**
 
 Set the following values in the backend hosting provider's environment settings:
 
-* `DATABASE_URL`
-* `JWT_ACCESS_SECRET`
-* `JWT_REFRESH_SECRET`
-* `JWT_ACCESS_EXPIRES_IN`
-* `JWT_REFRESH_EXPIRES_IN`
-* `PORT`, if required by the hosting platform
-* `CORS_ORIGIN` (**required** in production: the frontend's URL, e.g. `https://your-app.vercel.app`; separate several origins with commas)
-* `NODE_ENV=production`
+\* \`DATABASE_URL\`
+
+\* \`JWT_ACCESS_SECRET\`
+
+\* \`JWT_REFRESH_SECRET\`
+
+\* \`JWT_ACCESS_EXPIRES_IN\`
+
+\* \`JWT_REFRESH_EXPIRES_IN\`
+
+\* \`PORT\`, if required by the hosting platform
+
+\* \`CORS_ORIGIN\` (**\*\*required\*\*** in production: the frontend's URL, e.g. \`https://your-app.vercel.app\`; separate several origins with commas)
+
+\* \`NODE_ENV=production\`
 
 Generate strong, independent JWT secrets for production. Do not reuse secrets from local development.
 
-The application validates required environment variables and enforces production JWT secret requirements. Review `backend/src/config/validateEnv.js` for the actual validation rules.
+The application validates required environment variables and enforces production JWT secret requirements. Review \`backend/src/config/validateEnv.js\` for the actual validation rules.
 
 Never commit real credentials or production environment files to Git.
 
-### Step 3: Apply Database Migrations
+**\### Step 3: Apply Database Migrations**
 
 From the backend directory, install the locked dependencies and generate the Prisma client:
 
-```bash
+\`\`\`bash
+
 npm ci
+
 npx prisma generate
+
 npm run prisma:deploy
-```
 
-`npm run prisma:deploy` executes Prisma's production migration deployment command against the configured database.
+\`\`\`
 
-Do not use `prisma migrate dev` against a production database.
+\`npm run prisma:deploy\` executes Prisma's production migration deployment command against the configured database.
+
+Do not use \`prisma migrate dev\` against a production database.
 
 Back up important data and verify the migration plan before applying schema changes to a live system.
 
 Run the demo seed script in production only if demo accounts and seeded permissions are intentionally required. For real production users, use a controlled provisioning process and secure initial credentials.
 
-### Step 4: Deploy the Backend
+**\### Step 4: Deploy the Backend**
 
 Deploy the backend to a Node.js hosting platform.
 
 The production start command is:
 
-```bash
+\`\`\`bash
+
 npm start
-```
+
+\`\`\`
 
 Make sure the hosting environment supports the Node.js version, Prisma client, and database connectivity required by the application.
 
-Configure `CORS_ORIGIN` to match the actual frontend origin. The backend's CORS configuration must allow only the intended origins. `CORS_ORIGIN` is required when `NODE_ENV=production` (the server refuses to start without it); to allow several origins, separate them with commas.
+Configure \`CORS_ORIGIN\` to match the actual frontend origin. The backend's CORS configuration must allow only the intended origins. \`CORS_ORIGIN\` is required when \`NODE_ENV=production\` (the server refuses to start without it); to allow several origins, separate them with commas.
 
-### Step 5: Configure and Build the Frontend
+**\### Step 5: Configure and Build the Frontend**
 
-Configure `VITE_API_BASE_URL` before building the frontend.
+Configure \`VITE_API_BASE_URL\` before building the frontend.
 
-If the deployed frontend is served behind a reverse proxy that forwards `/api` requests to the backend, the relative `/api` value can be retained.
+If the deployed frontend is served behind a reverse proxy that forwards \`/api\` requests to the backend, the relative \`/api\` value can be retained.
 
 Otherwise, configure it to point to the appropriate deployed API base URL.
 
 Build the frontend:
 
-```bash
+\`\`\`bash
+
 cd frontend
+
 npm ci
+
 npm run build
-```
+
+\`\`\`
 
 Vite generates the production build in:
 
-```text
+\`\`\`text
+
 frontend/dist/
-```
+
+\`\`\`
 
 Deploy this static directory to your chosen hosting provider.
 
-**Important:** Vite environment variables are embedded in the client build. Do not put passwords, private API keys, JWT secrets, or other confidential values in `VITE_*` variables.
+**\*\*Important:\*\*** Vite environment variables are embedded in the client build. Do not put passwords, private API keys, JWT secrets, or other confidential values in \`VITE\_\*\` variables.
 
-### Step 6: Verify the Deployment
+**\### Step 6: Verify the Deployment**
 
 After deployment, verify:
 
-* The frontend loads successfully.
-* The backend health endpoint responds.
-* Database connectivity and migrations are correct.
-* Login and authentication work.
-* Role and permission restrictions are enforced.
-* Lead CRUD, assignments, notes, and follow-ups work.
-* Notifications load and can be marked as read.
-* Direct navigation and browser refresh work on supported routes.
-* CORS allows the intended frontend origin and rejects unauthorized origins.
-* No secrets are exposed in client-side bundles or public repositories.
+\* The frontend loads successfully.
+
+\* The backend health endpoint responds.
+
+\* Database connectivity and migrations are correct.
+
+\* Login and authentication work.
+
+\* Role and permission restrictions are enforced.
+
+\* Lead CRUD, assignments, notes, and follow-ups work.
+
+\* Notifications load and can be marked as read.
+
+\* Direct navigation and browser refresh work on supported routes.
+
+\* CORS allows the intended frontend origin and rejects unauthorized origins.
+
+\* No secrets are exposed in client-side bundles or public repositories.
 
 A successful build alone does not establish that the deployed application is fully production-ready.
 
----
+**---**
 
-## 3. Authentication and RBAC
+**\## 3. Authentication and RBAC**
 
-Authorization is **permission-driven rather than based solely on role names**.
+Authorization is **\*\*permission-driven rather than based solely on role names\*\***.
 
-### Roles and Permissions
+**\### Roles and Permissions**
 
 The system uses three baseline roles:
 
-* **Admin:** Administrative access, including user management and authorized lead operations.
-* **Manager:** Access to permitted lead and team-management operations within the manager's authorized scope.
-* **Executive:** Access to permitted lead operations within the executive's authorized scope.
+\* **\*\*Admin:\*\*** Administrative access, including user management\ and authorized lead operations.
+
+\* **\*\*Manager:\*\*** Access to permitted lead and team-management operations within the manager's authorized scope.
+
+\* **\*\*Executive:\*\*** Access to permitted lead operations within the executive's authorized scope.
 
 The actual capabilities of each role are defined by its associated permissions and the backend's data-scope rules.
 
-### Permission Model
+**\### Permission Model**
 
 The database uses permission records and role-permission associations:
 
-* `Permission` stores granular permission identifiers such as `lead.create` and `lead.assign`.
-* `Role` represents a role.
-* `RolePermission` associates roles with their permitted actions.
+\* \`Permission\` stores granular permission identifiers such as
+\`lead.create\` and \`lead.assign\`.
+
+\* \`Role\` represents a role.
+
+\* \`RolePermission\` associates roles with their permitted actions.
 
 The default permission wiring used by the seed script is defined in:
 
-```text
+\`\`\`text
+
 backend/src/config/permissions.js
-```
+
+\`\`\`
 
 Authorization middleware is implemented in:
 
-```text
+\`\`\`text
+
 backend/src/middleware/authorize.js
-```
+
+\`\`\`
 
 Lead visibility and access scope are handled by the relevant lead-scope service, including:
 
-```text
+\`\`\`text
+
 backend/src/services/leadScope.service.js
-```
 
-### Server-Side Enforcement
+\`\`\`
 
-**Frontend permission checks are not a security boundary.**
+**\### Server-Side Enforcement**
 
-The frontend's `usePermission()` hook controls which actions are displayed to the user. The backend independently verifies authorization before allowing protected operations.
+**\*\*Frontend permission checks are not a security boundary.\*\***
+
+The frontend's \`usePermission()\` hook controls which actions are displayed to the user. The backend independently verifies authorization before allowing protected operations.
 
 A request made directly to the API without the required permission must be rejected by the server.
 
@@ -375,47 +507,72 @@ The backend also enforces lead-access scope and relevant user-hierarchy restrict
 
 The permission-based design can support additional roles through database configuration where the relevant permissions and business rules already support them. New role requirements may still require code changes if they introduce new business behavior or data-scope rules.
 
----
+**---**
 
-## 4. Backend Testing
+**\## 4. Backend Testing**
 
 From the backend directory:
 
-```bash
+\`\`\`bash
+
 cd backend
+
 npm ci
+
 npx prisma generate
+
 npm test
-```
+
+\`\`\`
 
 The backend test command runs Node.js's built-in test runner against the test files.
 
 The existing test suite covers areas including:
 
-| Test suite                                    | Coverage                                                                                                                                                                      |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `httpAuth.test.js`                            | Login, token validation, token expiry/forgery, refresh-token type enforcement, and RBAC boundaries                                                                            |
-| `httpLeadSecurity.test.js`                    | Lead access scope, IDOR protection, lead CRUD, status and priority operations, history, notes, follow-ups, assignment, filtering, pagination, sorting, and status transitions |
-| `httpUserHierarchy.test.js`                   | Manager/Executive hierarchy rules, assignment notifications, manager deactivation behavior, and user access restrictions                                                      |
-| `httpScopeViews.test.js`                      | Role-scoped dashboards, CSV export scope, and notification privacy                                                                                                            |
-| `serviceFixes.test.js` and smaller test files | Service-level behavior and regression coverage                                                                                                                                |
-| `profile.http.test.js`, `profile.schema.test.js`, `profile.service.test.js` | Profile API: own details (phone, date of birth), password change and token invalidation, scoped read-only directory, validation rules |
-| `followUpVisibility.test.js`, `followUpSecurity.test.js` | Follow-up visibility by the lead's current assignee and the manager hierarchy; follow-up permission checks |
-| `leadLostAssignment.test.js`                  | Lost and converted leads cannot be assigned or reassigned until reopened |
-| `leadHardening.test.js`                       | Manager scope for leads they created, dashboard follow-ups ignoring closed leads, reopening behavior, same-assignee refusal |
-| `securityHardening.test.js`                   | Proxy-aware login rate limiting, admin lock-out protection, case-insensitive emails, CSV formula neutralization |
-| `validateEnv.test.js`                         | Startup environment validation, including required production settings (secrets, `CORS_ORIGIN`) |
-| `securityIntegration.test.js`                 | Additional security integration checks that require a generated Prisma client and a live PostgreSQL database                                                                  |
+\| Test suite                                    \| Coverage \|
+
+## \| --------------------------------------------- \|
+
+\|
+
+\| \`httpAuth.test.js\`                            \| Login, token
+validation, token expiry/forgery, refresh-token type enforcement, and
+RBAC boundaries \|
+
+\| \`httpLeadSecurity.test.js\`                    \| Lead access scope, IDOR protection, lead CRUD, status and priority operations, history, notes, follow-ups, assignment, filtering, pagination, sorting, and status transitions \|
+
+\| \`httpUserHierarchy.test.js\`                   \| Manager/Executive hierarchy rules, assignment notifications, manager deactivation behavior, and user access restrictions \|
+
+\| \`httpScopeViews.test.js\`                      \| Role-scoped dashboards, CSV export scope, and notification privacy \|
+
+\| \`serviceFixes.test.js\` and smaller test files \| Service-level behavior and regression coverage \|
+
+\| \`profile.http.test.js\`, \`profile.schema.test.js\`, \`profile.service.test.js\` \| Profile API: own details (phone, date of
+birth), password change and token invalidation, scoped read-only directory, validation rules \|
+
+\| \`followUpVisibility.test.js\`, \`followUpSecurity.test.js\` \|Follow-up visibility by the lead's current assignee and the manager hierarchy; follow-up permission checks \|
+
+\| \`leadLostAssignment.test.js\`                  \| Lost and converted leads cannot be assigned or reassigned until reopened \|
+
+\| \`leadHardening.test.js\`                       \| Manager scope for leads they created, dashboard follow-ups ignoring closed leads reopening behavior, same-assignee refusal \|
+
+\| \`securityHardening.test.js\`                   \| Proxy-aware login rate limiting, admin lock-out protection, case-insensitive emails, CSV formula neutralization \|
+
+\| \`validateEnv.test.js\`                         \| Startup environment validation, including required production settings (secrets, \`CORS_ORIGIN\`) \|
+
+\| \`securityIntegration.test.js\`                 \| Additional security integration checks that require a generated Prisma client and a live PostgreSQL database \|
 
 Consult the individual test files for their exact coverage and setup requirements.
 
-### Database Test Limitations
+**\### Database Test Limitations**
 
 Some HTTP test suites use the test helper:
 
-```text
+\`\`\`text
+
 backend/tests/helpers/memoryDb.js
-```
+
+\`\`\`
 
 These tests exercise the Express application, service logic, and authorization behavior using the configured in-memory test database.
 
@@ -425,167 +582,240 @@ A test suite requiring a live PostgreSQL database may be skipped when its prereq
 
 Before release, run the relevant integration checks against a properly configured PostgreSQL database and verify that all required tests actually execute.
 
----
+**---**
 
-## 5. Frontend Testing
+**\## 5. Frontend Testing**
 
 From the frontend directory:
 
-```bash
+\`\`\`bash
+
 cd frontend
+
 npm ci
+
 npm test
-```
+
+\`\`\`
 
 The frontend test command uses Vitest.
 
 The existing regression coverage includes:
 
-* `EditFollowUpDialog.test.jsx`: verifies that follow-up data is refreshed correctly when the dialog is reopened for a different follow-up, avoiding stale due dates, notes, or statuses.
+\* \`EditFollowUpDialog.test.jsx\`: verifies that follow-up data is refreshed correctly when the dialog is reopened for a different follow-up, avoiding stale due dates, notes, or statuses.
 
 Run the available test suite and investigate any failures rather than assuming that a successful production build means all UI behavior has been tested.
 
-### Manual UI and Responsive Verification
+**\### Manual UI and Responsive Verification**
 
 The interface has been redesigned for responsive desktop, tablet, and mobile usage.
 
 Important areas to verify include:
 
-* Login and authentication
-* Dashboard KPIs and charts
-* Leads list, filters, pagination, and mobile cards
-* Lead details and editing
-* Follow-ups, notes, and activity history
-* User management
-* My Profile (phone, date of birth, password change)
-* User Directory (search by name and by mobile number, CSV export)
-* Assigning and reassigning a lead (search, `(M)` / `(E)` tags, disabled for lost and converted leads)
-* Notifications
-* Navigation, dialogs, loading states, and error states
+\* Login and authentication
+
+\* Dashboard KPIs and charts
+
+\* Leads list, filters, pagination, and mobile cards
+
+\* Lead details and editing
+
+\* Follow-ups, notes, and activity history
+
+\* User management
+
+\* My Profile (phone, date of birth, password change)
+
+\* User Directory (search by name and by mobile number, CSV export)
+
+\* Assigning and reassigning a lead (search, \`(M)\` / \`(E)\` tags, disabled for lost and converted leads)
+
+\* Notifications
+
+\* Navigation, dialogs, loading states, and error states
 
 Suggested viewport sizes:
 
-| Device class  |   Viewport width |
-| ------------- | ---------------: |
-| Small phone   |            375px |
-| Phone         |            390px |
-| Large phone   |            430px |
-| Tablet        |            768px |
-| Small laptop  |           1024px |
-| Desktop       |           1366px |
-| Large desktop | 1440px and above |
+\| Device class  \|   Viewport width \|
 
-Check for horizontal overflow, clipped content, inaccessible controls, and broken navigation.
+\| ------------- \| ---------------: \|
+
+\| Small phone   \|            375px \|
+
+\| Phone         \|            390px \|
+
+\| Large phone   \|            430px \|
+
+\| Tablet        \|            768px \|
+
+\| Small laptop  \|           1024px \|
+
+\| Desktop       \|           1366px \|
+
+\| Large desktop \| 1440px and above \|
+
+Check for horizontal overflow, clipped content, inaccessible controls,
+and broken navigation.
 
 Automated browser-level end-to-end tests are not yet implemented.
 
----
+**---**
 
-## 6. Implemented Features
+**\## 6. Implemented Features**
 
-### Authentication and Authorization
+**\### Authentication and Authorization**
 
-* JWT access and refresh tokens
-* Token-type enforcement
-* Permission-driven RBAC
-* Server-side permission checks
-* Role-scoped access to protected operations
-* Startup environment validation
+\* JWT access and refresh tokens
 
-### Lead Management
+\* Token-type enforcement
 
-* Lead creation, viewing, editing, and soft deletion
-* Lead assignment and reassignment
-* Assignment history with resolved names
-* Status lifecycle and transition validation
-* Priority management
-* Search, filtering, sorting, and pagination
-* CSV export with error handling
-* Lead details and associated activity views
-* Assignment picker with name search and `(M)` / `(E)` role tags, limited to the users the signed-in user may assign to
-* Business rules: lost and converted leads cannot be assigned or reassigned (reopen via a status change first); a lead cannot be reassigned to its current assignee; the loss reason is kept when a lead is reopened, while the conversion date is cleared
-* Managers can edit, reassign and follow up only on leads currently assigned to them or their team (or unassigned leads they created); leads they created that moved to another team remain view-only
+\* Permission-driven RBAC
 
-### Follow-ups, Notes, and History
+\* Server-side permission checks
 
-* Follow-up creation, editing, and deletion
-* Due-date tracking and overdue indicators
-* Lead notes with edit and delete operations
-* Activity and audit history
-* Assignment and status-related history
-* Follow-ups are visible according to the lead's current assignee and the manager hierarchy
+\* Role-scoped access to protected operations
 
-### Dashboard and Reporting
+\* Startup environment validation
 
-* Role-scoped dashboards for Admin, Manager, and Executive
-* Open, new, resolved, and overdue lead metrics
-* Dashboard charts and activity summaries
-* Data scoped according to the user's authorization
-* Pending follow-ups of lost or converted leads are left out of the overdue, upcoming and due-today widgets
+**\### Lead Management**
 
-### User Management
+\* Lead creation, viewing, editing, and soft deletion
 
-* Administrative user management
-* Admin, Manager, and Executive roles
-* Executive-to-Manager assignment
-* User editing and manager selection
-* Manager deactivation handling and associated business rules
-* Admin lock-out protection: users cannot deactivate or change the role of their own account, and the last active Admin cannot be deactivated or demoted
-* Emails are trimmed and lowercased; duplicates that differ only by case are rejected, and sign-in ignores case
+\* Lead assignment and reassignment
 
-### Profile and User Directory
+\* Assignment history with resolved names
 
-* "My Profile" page: name, work email and role are read-only (managed by an Admin); users edit their own phone number (exactly 10 digits) and date of birth
-* Password change from the profile page; changing the password signs out all other sessions (older access and refresh tokens stop working)
-* "User Directory" page in the main navigation: Admins see all users, Managers see their own team, Executives do not see it
-* Directory search by name and, separately, by mobile number, plus CSV export of the filtered list
+\* Status lifecycle and transition validation
 
-### Notifications
+\* Priority management
 
-* In-app notification center
-* Unread notification badge
-* Mark-as-read behavior
-* Polling at 30-second intervals
-* Click-to-navigate to the relevant lead or filtered lead list
+\* Search, filtering, sorting, and pagination
 
-### UI/UX and Performance
+\* CSV export with error handling
 
-* Responsive application layout and navigation
-* Responsive dashboard, lead list, lead details, and user-management screens
-* Mobile lead and user cards
-* Improved loading, empty, and error states
-* Login UI improvements
-* Accessibility and responsive QA improvements
-* Route-level lazy loading to split page code into separate JavaScript chunks
+\* Lead details and associated activity views
 
-### Security Hardening
+\* Assignment picker with name search and \`(M)\` / \`(E)\` role tags, limited to the users the signed-in user may assign to
 
-* The API trusts one reverse-proxy hop (`trust proxy`), so login rate limiting counts each client separately behind Render
-* `CORS_ORIGIN` is required in production
-* CSV exports (leads and directory) neutralize values that spreadsheet applications would run as formulas
+\* Business rules: lost and converted leads cannot be assigned or reassigned (reopen via a status change first); a lead cannot be reassigned to its current assignee; the loss reason is kept when a lead is reopened, while the conversion date is cleared
 
----
+\* Managers can edit, reassign and follow up only on leads currently assigned to them or their team (or unassigned leads they created); leads they created that moved to another team remain view-only
 
-## 7. Deferred Features
+**\### Follow-ups, Notes, and History**
+
+\* Follow-up creation, editing, and deletion
+
+\* Due-date tracking and overdue indicators
+
+\* Lead notes with edit and delete operations
+
+\* Activity and audit history
+
+\* Assignment and status-related history
+
+\* Follow-ups are visible according to the lead's current assignee and the manager hierarchy
+
+**\### Dashboard and Reporting**
+
+\* Role-scoped dashboards for Admin, Manager, and Executive
+
+\* Open, new, resolved, and overdue lead metrics
+
+\* Dashboard charts and activity summaries
+
+\* Data scoped according to the user's authorization
+
+\* Pending follow-ups of lost or converted leads are left out of the overdue, upcoming and due-today widgets
+
+**\### User Management**
+
+\* Administrative user management
+
+\* Admin, Manager, and Executive roles
+
+\* Executive-to-Manager assignment
+
+\* User editing and manager selection
+
+\* Manager deactivation handling and associated business rules
+
+\* Admin lock-out protection: users cannot deactivate or change the role of their own account, and the last active Admin cannot be deactivated or demoted
+
+\* Emails are trimmed and lowercased; duplicates that differ only by case are rejected, and sign-in ignores case
+
+**\### Profile and User Directory**
+
+\* "My Profile" page: name, work email and role are read-only (managed by an Admin); users edit their own phone number (exactly 10 digits) and date of birth
+
+\* Password change from the profile page; changing the password signs out all other sessions (older access and refresh tokens stop working)
+
+\* "User Directory" page in the main navigation: Admins see all users, Managers see their own team, Executives do not see it
+
+\* Directory search by name and, separately, by mobile number, plus CSV export of the filtered list
+
+**\### Notifications**
+
+\* In-app notification center
+
+\* Unread notification badge
+
+\* Mark-as-read behavior
+
+\* Polling at 30-second intervals
+
+\* Click-to-navigate to the relevant lead or filtered lead list
+
+**\### UI/UX and Performance**
+
+\* Responsive application layout and navigation
+
+\* Responsive dashboard, lead list, lead details, and user-management screens
+
+\* Mobile lead and user cards
+
+\* Improved loading, empty, and error states
+
+\* Login UI improvements
+
+\* Accessibility and responsive QA improvements
+
+\* Route-level lazy loading to split page code into separate JavaScript chunks
+
+**\### Security Hardening**
+
+\* The API trusts one reverse-proxy hop (\`trust proxy\`), so login rate limiting counts each client separately behind Render
+
+\* \`CORS_ORIGIN\` is required in production
+
+\* CSV exports (leads and directory) neutralize values that spreadsheet applications would run as formulas
+
+**---**
+
+**\## 7. Deferred Features**
 
 The following are not currently represented as completed features:
 
-* Bulk lead operations
-* Real-time notifications using WebSockets
-* Configurable report definitions beyond the existing dashboard KPIs
-* Automated browser-level end-to-end tests
-* Full integration testing of all relevant flows against a real PostgreSQL deployment
-* Refresh-token revocation and rotation for stronger authentication security
+\* Bulk lead operations
+
+\* Real-time notifications using WebSockets
+
+\* Configurable report definitions beyond the existing dashboard KPIs
+
+\* Automated browser-level end-to-end tests
+
+\* Full integration testing of all relevant flows against a real PostgreSQL deployment
+
+\* Refresh-token revocation and rotation for stronger authentication security
 
 These items can be considered for future development according to project requirements.
 
----
+**---**
 
-## 8. Known Security Limitations
+**\## 8. Known Security Limitations**
 
-### Stateless Refresh Tokens
+**\### Stateless Refresh Tokens**
 
-**Refresh tokens are stateless JWTs and do not have a server-side revocation mechanism.**
+**\*\*Refresh tokens are stateless JWTs and do not have a server-side revocation mechanism.\*\***
 
 The refresh flow verifies the refresh token and checks whether the user is still active before issuing a new access token. However, there is no server-side record of issued refresh tokens that allows an individual token to be revoked.
 
@@ -593,128 +823,216 @@ Consequently, a leaked refresh token may remain usable until its expiry, provide
 
 The default refresh-token lifetime is:
 
-```env
+\`\`\`env
+
 JWT_REFRESH_EXPIRES_IN="7d"
-```
+
+\`\`\`
 
 Account deactivation checks can prevent refresh attempts once the backend detects that the user is inactive. They do not provide a general token-revocation mechanism.
 
-Changing a password does invalidate every access and refresh token issued before the change (the user's `passwordChangedAt` timestamp is compared with each token's issue time). Logging out only clears the tokens in the browser; it does not revoke the refresh token on the server. A password-reset or logout-everywhere feature, if introduced, must not be assumed to revoke previously issued refresh tokens unless explicit revocation support is implemented.
+Changing a password does invalidate every access and refresh token issued before the change (the user's \`passwordChangedAt\` timestamp is compared with each token's issue time). Logging out only clears the tokens in the browser; it does not revoke the refresh token on the server. A password-reset or logout-everywhere feature, if introduced, must not be assumed to revoke previously issued refresh tokens unless explicit revocation support is implemented.
 
-### Other Known Limitations
+**\### Other Known Limitations**
 
-* Deactivating a user does not reassign or release that user's leads; they stay assigned to the deactivated account until an Admin reassigns them.
-* Emails are matched case-insensitively in the application, but the database unique index on `email` is still case-sensitive.
+\* Deactivating a user does not reassign or release that user's leads; they stay assigned to the deactivated account until an Admin reassigns them.
 
-### Recommended Improvement
+\* Emails are matched case-insensitively in the application, but the database unique index on \`email\` is still case-sensitive.
+
+**\### Recommended Improvement**
 
 For stronger authentication security, implement a server-side refresh-token store. A typical design uses a random token identifier or token hash stored in the database, with token rotation and revocation checks on every refresh.
 
 This would support explicit invalidation of tokens, logout-everywhere behavior, and stronger handling of compromised refresh credentials.
 
-Until such functionality is implemented and tested, **the refresh-token mechanism should not be described as fully production-hardened**.
+Until such functionality is implemented and tested, **\*\*the refresh-token mechanism should not be described as fully production-hardened\*\***.
 
-### Additional Production Considerations
+**\### Additional Production Considerations**
 
 Before a public or business-critical deployment:
 
-* Use HTTPS for all application traffic.
-* Use strong, unique production secrets.
-* Keep `.env` files and credentials out of Git.
-* Configure CORS for the intended frontend origins only (`CORS_ORIGIN` is required in production).
-* The API assumes exactly one reverse proxy in front of it (`trust proxy` is set to `1` in `backend/src/app.js`). Adjust that value if your hosting topology has more or fewer proxy hops.
-* Use least-privilege database credentials.
-* Apply database migrations through the deployment process.
-* Review authentication rate limits and monitoring requirements.
-* Avoid using demo accounts or default demo passwords in production.
-* Test authorization and data-scope boundaries against the deployed configuration.
-* Maintain backups and a recovery plan for production data.
+\* Use HTTPS for all application traffic.
 
----
+\* Use strong, unique production secrets.
 
-## 9. Environment Files and Repository Hygiene
+\* Keep \`.env\` files and credentials out of Git.
+
+\* Configure CORS for the intended frontend origins only (\`CORS_ORIGIN\` is required in production).
+
+\* The API assumes exactly one reverse proxy in front of it (\`trust proxy\` is set to \`1\` in \`backend/src/app.js\`). Adjust that value if your hosting topology has more or fewer proxy hops.
+
+\* Use least-privilege database credentials.
+
+\* Apply database migrations through the deployment process.
+
+\* Review authentication rate limits and monitoring requirements.
+
+\* Avoid using demo accounts or default demo passwords in production.
+
+\* Test authorization and data-scope boundaries against the deployed configuration.
+
+\* Maintain backups and a recovery plan for production data.
+
+**---**
+
+**\## 9. Environment Files and Repository Hygiene**
 
 The repository provides environment templates:
 
-```text
-backend/.env.example
-frontend/.env.example
-```
+\`\`\`text
 
-Create local `.env` files from these templates and supply the appropriate local or deployment-specific values.
+backend/.env.example
+
+frontend/.env.example
+
+\`\`\`
+
+Create local \`.env\` files from these templates and supply the appropriate local or deployment-specific values.
 
 Real environment files, credentials, generated build output, logs, and dependency directories should not be committed to the repository.
 
 Typical exclusions include:
 
-```gitignore
+\`\`\`gitignore
+
 node_modules/
+
 .env
-.env.*
+
+.env.\*
+
 !.env.example
+
 dist/
+
 build/
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
+
+\*.log
+
+npm-debug.log\*
+
+yarn-debug.log\*
+
+pnpm-debug.log\*
+
 .DS_Store
+
 Thumbs.db
-```
 
-Merge these patterns with the existing `.gitignore` rules rather than removing other necessary project-specific exclusions.
+\`\`\`
 
-The frontend production build is generated in `frontend/dist/`. The backend production process uses the configured Node.js runtime and generated Prisma client.
+Merge these patterns with the existing \`.gitignore\` rules rather than removing other necessary project-specific exclusions.
 
-For reproducible installations, use `npm ci` when a valid `package-lock.json` is available. Do not commit `node_modules`; dependencies should be installed for the target platform.
+The frontend production build is generated in \`frontend/dist/\`. The backend production process uses the configured Node.js runtime and generated Prisma client.
 
----
+For reproducible installations, use \`npm ci\` when a valid \`package-lock.json\` is available. Do not commit \`node_modules\`;
+dependencies should be installed for the target platform.
 
-## 10. Production Readiness Checklist
+**---**
+
+**\## 10. Production Readiness Checklist**
 
 Before submitting or deploying the project, verify the following.
 
-### Configuration and Security
+**\### Configuration and Security**
 
-* [ ] Real `.env` files are excluded from Git and public archives.
-* [ ] `.env.example` files contain only safe placeholders and documented defaults.
-* [ ] Production JWT secrets are strong and distinct.
-* [ ] Production `DATABASE_URL` points to the intended database.
-* [ ] `CORS_ORIGIN` is set and matches the deployed frontend origin (the server will not start in production without it).
-* [ ] The frontend API base URL is correct for the deployment topology.
-* [ ] Demo credentials are not used for real accounts.
-* [ ] Known refresh-token limitations are documented.
+\* \[ \] Real \`.env\` files are excluded from Git and public archives.
 
-### Database and Backend
+\* \[ \] \`.env.example\` files contain only safe placeholders and documented defaults.
 
-* [ ] Prisma client generation succeeds on the target environment.
-* [ ] Database migrations apply successfully.
-* [ ] Backend tests have been run and their results reviewed.
-* [ ] Required integration tests have not been silently skipped.
-* [ ] Authentication, authorization, and lead-scope restrictions are verified.
-* [ ] Health endpoint and server startup have been checked.
+\* \[ \] Production JWT secrets are strong and distinct.
 
-### Frontend
+\* \[ \] Production \`DATABASE_URL\` points to the intended database.
 
-* [ ] `npm ci` completes successfully.
-* [ ] `npm test` completes successfully.
-* [ ] `npm run build` completes successfully.
-* [ ] Route-level lazy loading works when navigating between pages.
-* [ ] Direct route navigation and browser refresh work.
-* [ ] Desktop and mobile layouts have been manually checked.
-* [ ] No blocking console errors remain.
+\* \[ \] \`CORS_ORIGIN\` is set and matches the deployed frontend origin (the server will not start in production without it).
 
-### Repository and Submission
+\* \[ \] The frontend API base URL is correct for the deployment topology.
 
-* [ ] All intended source changes are reviewed.
-* [ ] No real secrets are committed.
-* [ ] README setup and deployment instructions match the current code.
-* [ ] `node_modules` and generated build output are excluded from Git.
-* [ ] The final ZIP contains the files required by the intended recipient.
-* [ ] Final test results and any remaining limitations are documented.
+\* \[ \] Demo credentials are not used for real accounts.
+
+\* \[ \] Known refresh-token limitations are documented.
+
+**\### Database and Backend**
+
+\* \[ \] Prisma client generation succeeds on the target environment.
+
+\* \[ \] Database migrations apply successfully.
+
+\* \[ \] Backend tests have been run and their results reviewed.
+
+\* \[ \] Required integration tests have not been silently skipped.
+
+\* \[ \] Authentication, authorization, and lead-scope restrictions are verified.
+
+\* \[ \] Health endpoint and server startup have been checked.
+
+**\### Frontend**
+
+\* \[ \] \`npm ci\` completes successfully.
+
+\* \[ \] \`npm test\` completes successfully.
+
+\* \[ \] \`npm run build\` completes successfully.
+
+\* \[ \] Route-level lazy loading works when navigating between pages.
+
+\* \[ \] Direct route navigation and browser refresh work.
+
+\* \[ \] Desktop and mobile layouts have been manually checked.
+
+\* \[ \] No blocking console errors remain.
+
+**\### Repository and Submission**
+
+\* \[ \] All intended source changes are reviewed.
+
+\* \[ \] No real secrets are committed.
+
+\* \[ \] README setup and deployment instructions match the current code.
+
+\* \[ \] \`node_modules\` and generated build output are excluded from Git.
+
+\* \[ \] The final ZIP contains the files required by the intended recipient.
+
+\* \[ \] Final test results and any remaining limitations are documented.
+
+**---**
+
+**\## License and Project Use**
+
+Add the applicable license information here if the project is distributed under an open-source or other explicit license. Do not imply a license has been granted unless one has actually been selected and included in the repository.
 
 ---
 
-## License and Project Use
+## Database Backup and Restore
 
-Add the applicable license information here if the project is distributed under an open-source or other explicit license. Do not imply a license has been granted unless one has actually been selected and included in the repository.
+The repository includes `backend/lead_management_system.sql`, a **sanitized sample database dump** for local setup and review. It preserves the PostgreSQL schema, constraints, indexes, Prisma migration history, and sample relationships, but replaces user/lead contact details and removes password hashes. It is **not** an exact copy of the live Render database and its sample users are not intended to be used to log in.
+
+### Restore the SQL dump
+
+Use PostgreSQL 18 or a compatible newer PostgreSQL client/server. Create an empty database first, then restore the dump into it. For example, from PowerShell at the repository root (adjust the username, host, port, and database name to your local setup):
+
+```powershell
+createdb -h localhost -p 5432 -U lms_user lms_db
+psql -h localhost -p 5432 -U lms_user -d lms_db -v ON_ERROR_STOP=1 -f .\backend\lead_management_system.sql
+```
+
+If the database already exists and contains tables, do **not** import this dump over it. Use a new empty database or drop/recreate a disposable local database first. The dump includes schema and data; do not run `prisma migrate dev --name init` on top of this restored database.
+
+After restoring, configure `DATABASE_URL` in `backend/.env` to point to that database, then run:
+
+```bash
+cd backend
+npm install
+npx prisma generate
+npm start
+```
+
+The SQL dump contains sample records. The `users` table's password hashes are intentionally redacted, so these sample users cannot authenticate. For a fresh development database where you want the seeded demo accounts, prefer the Prisma migration and seed workflow documented in the Local Setup section instead of importing this dump.
+
+### Sharing and security
+
+- Do not commit a dump of the live production database to a public repository unless sharing every included record is explicitly authorized.
+- Keep real `.env` files, credentials, password hashes, and real customer/user contact information out of Git.
+- The checked-in SQL file is for schema/data reproducibility and review, not as a production backup or a replacement for managed
+  database backups.
